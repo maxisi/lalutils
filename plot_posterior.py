@@ -29,7 +29,7 @@ data = posterior[args.column]
 plt.figure()
 plt.hist(data, 100, log=log, histtype='step', normed=1)
 plt.xlabel(args.column)
-plt.ylabel("Normalized count")
+plt.ylabel("Normed count")
 plt.savefig(args.output_path, bbox_inches='tight')
 plt.close()
 
