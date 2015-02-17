@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# This script can pull, make install and source a particular branch of LALSuite.
+# Arguments: branch name. Options: -p (pull), -i (install), -s (source).
+
+# Repository and root directories:
+SRCDIR="/home/max.isi/lscsoft/src/lalsuite"
+OPTDIR="/home/max.isi/lscsoft/opt"
+
+# Default options (do not do anything):
+PULL=false
+INSTALL=false
+SOURCE=false
+
+# Obtain flags from command line:
+while getopts "pis" flag; do
+  case "$flag" in
+    p) PULL=true;;
+    i) INSTALL=true;;
+    s) SOURCE=true;;
+    *) error "Unexpected option ${flag}";;
+  esac
+done
+
+# Branch name must be single argument:
+BRANCH=${@:$OPTIND:1}
+
+# Run until something breaks:
+{
+  if [ "$PULL" = true ] ; then
+    cd "$SRCDIR"/lalala &&
+    it pull --rebase
+  fi
+} && {
+  if [ "$INSTALL" = true ]; then
+    cd "$SRCDIR" &&
+    git checkout "$BRANCH" &&
+    ./00boot &&
+    ./configure --prefix=$OPTDIR/$BRANCH &&
+    make -j install
+  fi
+} && {
+  if [ "$SOURCE" = true ]; then
+    . $OPTDIR/$BRANCH/etc/lal-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalframe-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalmetaio-user-env.sh
+    . $OPTDIR/$BRANCH/etc/lalsimulation-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalburst-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalinspiral-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalstochastic-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalpulsar-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalinference-user-env.sh 
+    . $OPTDIR/$BRANCH/etc/lalapps-user-env.sh
+  fi
+}
