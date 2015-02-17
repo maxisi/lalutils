@@ -6,6 +6,9 @@
 # Repository and root directories:
 SRCDIR="/home/max.isi/lscsoft/src/lalsuite"
 OPTDIR="/home/max.isi/lscsoft/opt"
+ENVFILE="/home/max.isi/.lalsuite_profile"
+PACKAGES=("lal" "lalframe" "lalmetaio" "lalsimulation" "lalburst" "lalinspiral"
+          "lalstochastic" "lalpulsar" "lalinference" "lalapps")
 
 # Default options (do not do anything):
 PULL=false
@@ -29,7 +32,7 @@ BRANCH=${@:$OPTIND:1}
 {
   if [ "$PULL" = true ] ; then
     cd "$SRCDIR" &&
-    it pull --rebase
+    git pull --rebase
   fi
 } && {
   if [ "$INSTALL" = true ]; then
@@ -41,15 +44,11 @@ BRANCH=${@:$OPTIND:1}
   fi
 } && {
   if [ "$SOURCE" = true ]; then
-    . $OPTDIR/$BRANCH/etc/lal-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalframe-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalmetaio-user-env.sh
-    . $OPTDIR/$BRANCH/etc/lalsimulation-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalburst-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalinspiral-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalstochastic-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalpulsar-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalinference-user-env.sh 
-    . $OPTDIR/$BRANCH/etc/lalapps-user-env.sh
+    echo "Packages included:"
+    for package in ${PACKAGES[@]}; do
+      echo ". $OPTDIR/$BRANCH/etc/$package-user-env.sh" >> $ENVFILE &&
+      echo $package
+    done
+    echo "LALSuite $BRANCH ready for sourcing: source $ENVFILE"
   fi
 }
