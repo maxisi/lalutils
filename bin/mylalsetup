@@ -28,7 +28,7 @@ BRANCH=${@:$OPTIND:1}
 # Run until something breaks:
 {
   if [ "$PULL" = true ] ; then
-    cd "$SRCDIR"/lalala &&
+    cd "$SRCDIR" &&
     it pull --rebase
   fi
 } && {
