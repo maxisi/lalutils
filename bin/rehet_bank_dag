@@ -125,22 +125,21 @@ with open(dagpath, 'w') as f:
                 pulsars = args.pulsars
 
             for psr in pulsars:
-                    for injkind in ['GR', 'G4v']:
-                        jobname = "%s_%s_%s" % (psr, run, det)
+                    jobname = "%s_%s_%s" % (psr, run, det)
 
-                        txt_lines = [
-                            '# %s %s %s' % (run, det, psr),
-                            'JOB %s %s' % (jobname, subpath),
-                            'VARS %s psr="%s"' % (jobname, psr),
-                            'VARS %s det="%s"' % (jobname, det),
-                            'VARS %s run="%s"' % (jobname, run),
-                            'VARS %s ninst="%s"' % (jobname, str(ninst)),
-                            'RETRY %s 2' % jobname,  # retry job 2 times
-                            '\n'
-                        ]
+                    txt_lines = [
+                        '# %s %s %s' % (run, det, psr),
+                        'JOB %s %s' % (jobname, subpath),
+                        'VARS %s psr="%s"' % (jobname, psr),
+                        'VARS %s det="%s"' % (jobname, det),
+                        'VARS %s run="%s"' % (jobname, run),
+                        'VARS %s ninst="%s"' % (jobname, str(ninst)),
+                        'RETRY %s 2' % jobname,  # retry job 2 times
+                        '\n'
+                    ]
 
-                        for l in txt_lines:
-                            f.write('%s\n' % l)
+                    for l in txt_lines:
+                        f.write('%s\n' % l)
 
 
 # Configure Dagman to not limit the number of times a node is put on hold
