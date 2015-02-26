@@ -37,8 +37,8 @@ BRANCH=${@:$OPTIND:1}
 } && {
   if [ "$INSTALL" = true ]; then
     cd "$SRCDIR" &&
-    git checkout "$BRANCH" &&
     git clean -dfx &&
+    git checkout "$BRANCH" &&
     ./00boot &&
     ./configure --enable-condor --prefix=$OPTDIR/$BRANCH &&
     make -j install
