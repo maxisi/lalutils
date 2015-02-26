@@ -93,7 +93,7 @@ subfile_lines = [
     'Executable = %s' % exepath,
     'initialdir = %s' % basedir,
     'arguments = "-p $(psr) -d $(det) -r $(run) --ninst $(ninst) --fid -1'
-    '--polHTC %s"' % polHTCpath,
+    '--polHTC %s $(output_path)"' % polHTCpath,
     'Output = %srehetbank_$(psr)_$(det)_$(run).out' % logsdir,
     'Error = %srehetbank_$(psr)_$(det)_$(run).err' % logsdir,
     'Log = %srehetbank_$(psr)_$(det)_$(run).log' % logsdir,
@@ -126,6 +126,13 @@ with open(dagpath, 'w') as f:
 
             for psr in pulsars:
                     jobname = "%s_%s_%s" % (psr, run, det)
+                    output_dir = os.path.join(basedir, run, det, psr)
+                    try:
+                        os.mkdir(output_dir)
+                    except OSError:
+                        pass
+                    filename = "rehet_%s_%s" % (psr, det)
+                    output_path = os.path.join(output_dir, filename)
 
                     txt_lines = [
                         '# %s %s %s' % (run, det, psr),
@@ -134,6 +141,7 @@ with open(dagpath, 'w') as f:
                         'VARS %s det="%s"' % (jobname, det),
                         'VARS %s run="%s"' % (jobname, run),
                         'VARS %s ninst="%s"' % (jobname, str(ninst)),
+                        'VARS %s output_path="%s"' % (jobname, output_path),
                         'RETRY %s 2' % jobname,  # retry job 2 times
                         '\n'
                     ]
