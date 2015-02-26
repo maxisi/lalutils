@@ -35,6 +35,7 @@ parser.add_argument("--actual-time", action="store_true",
                          " when generating Gaussian noise.")
 parser.add_argument("--polHTC", default=None, type=str, help="polHTC root dir")
 parser.add_argument("--real-std", action="store_true")
+parser.add_argument("--gzip", action="store_true")
 
 args = parser.parse_args()
 verbose = args.verbose
@@ -73,35 +74,29 @@ if args.fid is not None:
         sys.exit(1)
     elif args.fid < 0:
         # since this case is so different, handle it separetly here
-        if args.real_noise:
-            print "WARNING: will create %i instantiations of detector" \
+        for fix in range(args.ninst):
+            if args.real_noise:
+                print "WARNING: will create %i instantiations of detector" \
                   " noise." % args.ninst
-            for fix in range(args.ninst):
                 # reheterodyne
                 data = g.het(FREQ_ARRAY[fix], pair.data, pair.time)
                 time = pair.time
-                # save
-                fname = args.output_path + "_%i%s" % (fix, extension)
-                np.savetxt(fname, zip(time, data.real, data.imag),
-                           ("%.6f", "%e", "%e"), delimiter="\t")
-                if verbose:
-                    print "ASCII data %i/%i saved: %s" %\
-                          (fix, args.ninst, args.output_path)
-        else:
-            print "WARNING: will create %i instantiations of Gaussian" \
-                  " noise." % args.ninst
-            random.seed(2)
-            for fix in range(args.ninst):
+            else:
+                print "WARNING: will create %i instantiations of Gaussian" \
+                      " noise." % args.ninst
+                random.seed(2)
                 time = pair.time
                 data = np.array([random.gauss(0., noisestd) for n in
                                  range(len(pair.data))])
-                # save
-                fname = args.output_path + "_%i%s" % (fix, extension)
-                np.savetxt(fname, zip(time, data.real, data.imag),
-                           ("%.6f", "%e", "%e"), delimiter="\t")
-                if verbose:
-                    print "ASCII data %i/%i saved: %s" %\
-                          (fix, args.ninst, fname)
+            # save
+            fname = args.output_path + "_%i%s" % (fix, extension)
+            if args.gzip:
+                fname += '.gz'
+            np.savetxt(fname, zip(time, data.real, data.imag),
+                       ("%.6f", "%e", "%e"), delimiter="\t")
+            if verbose:
+                print "ASCII data %i/%i saved: %s" %\
+                      (fix, args.ninst, fname)
         sys.exit(0)
     else:
         rehetfreq = FREQ_ARRAY[args.fid]
