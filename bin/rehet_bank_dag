@@ -92,7 +92,7 @@ subfile_lines = [
     'Universe = Vanilla',
     'Executable = %s' % exepath,
     'initialdir = %s' % basedir,
-    'arguments = "$(output_path) -p $(psr) -d $(det) -r $(run) --gzip '
+    'arguments = "$(output_path) -p $(psr) -d $(det) -r $(run) --gzip --no-overwrite '
     '--ninst $(ninst) --fid -1 --polHTC %s --real-noise"' % polHTCpath,
     'Output = %srehetbank_$(psr)_$(det)_$(run).out' % logsdir,
     'Error = %srehetbank_$(psr)_$(det)_$(run).err' % logsdir,

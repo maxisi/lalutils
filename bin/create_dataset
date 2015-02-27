@@ -36,6 +36,7 @@ parser.add_argument("--actual-time", action="store_true",
 parser.add_argument("--polHTC", default=None, type=str, help="polHTC root dir")
 parser.add_argument("--real-std", action="store_true")
 parser.add_argument("--gzip", action="store_true")
+parser.add_argument("--no-overwrite", action="store_true")
 
 args = parser.parse_args()
 verbose = args.verbose
@@ -75,6 +76,11 @@ if args.fid is not None:
     elif args.fid < 0:
         # since this case is so different, handle it separetly here
         for fix in range(args.ninst):
+            fname = args.output_path + "_%i%s" % (fix, extension)
+            if args.no_overwrite and os.path.isfile(fname):
+              print "File exists: nothing to do."
+              sys.exit(0)
+
             if args.real_noise:
                 print "WARNING: will create %i instantiations of detector" \
                   " noise." % args.ninst
@@ -89,7 +95,6 @@ if args.fid is not None:
                 data = np.array([random.gauss(0., noisestd) for n in
                                  range(len(pair.data))])
             # save
-            fname = args.output_path + "_%i%s" % (fix, extension)
             if args.gzip:
                 fname += '.gz'
             np.savetxt(fname, zip(time, data.real, data.imag),
