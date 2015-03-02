@@ -52,7 +52,7 @@ dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-executable = "lalapps_pulsar_parameter_estimation_nested"
+executable = "/home/max.isi/lscsoft/opt/nonGRcw/bin/lalapps_pulsar_parameter_estimation_nested"
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
@@ -187,7 +187,7 @@ subG4vlines = [
     'initialdir = %s' % basedir,
     'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
     ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
-    '--ensembleStretch 1 --ensembleWalk 1 --detectors %s %s"'
+    '--ensembleStretch 1 --ensembleWalk 1 --nonGR G4v --detectors %s %s"'
     % (parfile, datapath, outG4vstring, priorG4vfile, args.Nlive, detstring,
     injectstring),
     'Output = %sg4v_$(instID).out' % logsdir,

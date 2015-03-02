@@ -46,6 +46,7 @@ BRANCH=${@:$OPTIND:1}
 } && {
   if [ "$SOURCE" = true ]; then
     echo "Packages included:"
+    rm $ENVFILE
     for package in ${PACKAGES[@]}; do
       echo ". $OPTDIR/$BRANCH/etc/$package-user-env.sh" >> $ENVFILE &&
       echo $package
