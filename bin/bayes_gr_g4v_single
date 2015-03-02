@@ -1,0 +1,246 @@
+#! /usr/bin/env python
+
+import os
+import sys
+import random
+import argparse
+import numpy as np
+
+
+"""
+
+"""
+
+###############################################################################
+# PARSE ARGUMENTS
+parser = argparse.ArgumentParser()
+parser.add_argument("data_dir")
+parser.add_argument("-d", "--detectors", nargs='+', default=["H1"])
+parser.add_argument("-r", "--run", default="S5")
+parser.add_argument("-p", "--pulsar", default="J0534+2200")
+parser.add_argument("--ninst", default=1000, type=int,
+                    help="Number of instantiations to produce.")
+parser.add_argument("--inject-c22", default=None, type=float)
+parser.add_argument("--inject-phi22", default=None, type=float)
+parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
+parser.add_argument("-v", "--verbose", action="store_true")
+parser.add_argument("--Nlive", default=1000, type=int)
+parser.add_argument("--polHTC", default=None, help="Path to polHTC.")
+
+
+args = parser.parse_args()
+detectors = args.detectors
+psrname = args.pulsar
+run = args.run
+ninst = args.ninst
+basedir = os.path.join(os.path.abspath(args.base_dir),
+                       "bayes_GR_G4v_%s/" % psrname)
+verbose = args.verbose
+
+#if args.polHTC:
+#    sys.path.append(args.polHTC)
+#from polHTC import general as g
+
+###############################################################################
+# DIRECTORY STRUCTURE AND PATHS
+
+subpath_GR = os.path.join(basedir, "htc/", "ppe_GR.sub")
+
+subpath_G4v = os.path.join(basedir, "htc/", "ppe_G4v.sub")
+
+dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
+
+dagconfig = os.path.join(basedir, "htc/", "dagman.config")
+
+executable = "lalapps_pulsar_parameter_estimation_nested"
+
+logsdir = os.path.join(basedir, "htc/", "logs/")
+
+ppeconfig = os.path.join(basedir, "config/")
+
+ppeoutput = os.path.join(basedir, "out/")
+
+try:
+    os.makedirs(basedir)
+except OSError:
+    print "WARNING: base directory already exists " \
+          "and data might be overwritten."
+
+for directory in [logsdir, ppeconfig, ppeoutput]:
+    try:
+        os.makedirs(directory)
+    except OSError:
+        pass
+
+
+###############################################################################
+# WRITE PULSAR.PAR
+
+if psrname != "J0534+2200":
+    print "Only Crab currently supported!"
+    exit(1)
+else:
+    parlines = [
+        "RAJ 10:11:12.5643",
+        "DECJ -21:45:54.7855",
+        "F0 100.0",
+        "F1 1e-15",
+        "PEPOCH 54000.0"
+    ]
+    parfile = os.path.join(ppeconfig, "pulsar.par")
+    with open(parfile, "w") as f:
+        for line in parlines:
+            f.write("%s\n" % line)
+
+###############################################################################
+# WRITE PRIOR.TXT's
+
+priorGRlines = [
+    "C22 uniform 0 1e-21",
+    "psi uniform -0.785398163397448 0.785398163397448",
+    "phi22 uniform 0 6.283185307179586",
+    "cosiota uniform -1 1"
+]
+
+priorG4vlines = [
+    "PSI uniform -0.785398163397448 0.785398163397448",
+    "H0 uniform 0 1e-21",
+    "IOTA uniform 0 6.28318530718",
+    "PHI0VECTOR uniform 0 6.28318530718"
+]
+
+priorGRfile = os.path.join(ppeconfig, "prior_GR.txt")
+with open(priorGRfile, "w") as f:
+    for line in priorGRlines:
+        f.write("%s\n" % line)
+
+priorG4vfile = os.path.join(ppeconfig, "prior_G4v.txt")
+with open(priorG4vfile, "w") as f:
+    for line in priorG4vlines:
+        f.write("%s\n" % line)
+
+###############################################################################
+# WRITE INJECT.TXT
+
+if args.inject_c22 is not None:
+    if args.inject_phi22 < 0:
+        # select random phi22
+        phi22 = random.uniform(0, 2*np.pi)
+    else:
+        phi22 = args.inject_phi22
+
+    injectlines = [
+        "RAJ 05:34:31.973",
+        "DECJ +22:00:52.06",
+        "F0 30.2254370",
+        "F1 -3.86228e-10",
+        "PEPOCH 54000.0",
+        "PSI 2.16420827",
+        "COSIOTA 0.48",
+        "C22 %.6e" % args.inject_c22,
+        "PHI22 %.6f " % phi22
+    ]
+    injectfile = os.path.join(ppeconfig, "inject.txt")
+    with open(injectfile, "w") as f:
+        for line in injectlines:
+            f.write("%s\n" % line)
+
+###############################################################################
+# WRITE SUBMITS
+
+detstring = ""
+datapath = ""
+for det in detectors:
+    detstring += "%s " % det
+    datapath += "%srehet_%s_%s_$(instID).gz " \
+                % (os.path.join(args.data_dir, "%s/" % run, "%s/" % det),
+                   psrname, det)
+
+if args.inject_c22 is not None:
+    injectstring = "--inject-file %s" % injectfile
+else:
+    injectstring = ""
+
+outGRstring = os.path.join(ppeoutput, "out_gr_$(instID).txt")
+
+subGRlines = [
+    'Universe = Standard',
+    'Executable = %s' % executable,
+    'initialdir = %s' % basedir,
+    'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
+    ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
+    '--ensembleStretch 1 --ensembleWalk 1 --detectors %s %s"'
+    % (parfile, datapath, outGRstring, priorGRfile, args.Nlive, detstring,
+    injectstring),
+    'Output = %sgr_$(instID).out' % logsdir,
+    'Error = %sgr_$(instID).err' % logsdir,
+    'Log = %sgr_$(instID).log' % logsdir,
+    'getenv = true',
+    'Queue'
+]
+
+outG4vstring = os.path.join(ppeoutput, "out_g4v_$(instID).txt")
+
+subG4vlines = [
+    'Universe = Standard',
+    'Executable = %s' % executable,
+    'initialdir = %s' % basedir,
+    'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
+    ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
+    '--ensembleStretch 1 --ensembleWalk 1 --detectors %s %s"'
+    % (parfile, datapath, outG4vstring, priorG4vfile, args.Nlive, detstring,
+    injectstring),
+    'Output = %sg4v_$(instID).out' % logsdir,
+    'Error = %sg4v_$(instID).err' % logsdir,
+    'Log = %sg4v_$(instID).log' % logsdir,
+    'getenv = true',
+    'Queue'
+]
+
+with open(subpath_GR, 'w') as f:
+    for line in subGRlines:
+        f.write('%s\n' % line)
+
+with open(subpath_G4v, 'w') as f:
+    for line in subG4vlines:
+        f.write('%s\n' % line)
+
+
+###############################################################################
+# WRITE DAG
+
+with open(dagpath, 'w') as f:
+    # Point to configuration file with DAGman variables:
+    f.write('CONFIG %s\n\n' % dagconfig)
+
+    for det in detectors:
+        for instID in range(ninst):
+            gr_jobname = "gr_%s_%s_%s_%i" % (psrname, run, det, instID)
+            gr_lines = [
+                '# GR %s %s %s %i' % (run, det, psrname, instID),
+                'JOB %s %s' % (gr_jobname, subpath_GR),
+                'VARS %s instID="%i"' % (gr_jobname, instID),
+                '\n'
+            ]
+
+            for line in gr_lines:
+                f.write('%s\n' % line)
+
+            g4v_jobname = "g4v_%s_%s_%s_%i" % (psrname, run, det, instID)
+            g4v_lines = [
+                '# G4v %s %s %s %i' % (run, det, psrname, instID),
+                'JOB %s %s' % (g4v_jobname, subpath_G4v),
+                'VARS %s instID="%i"' % (g4v_jobname, instID),
+                '\n'
+            ]
+
+            for line in g4v_lines:
+                f.write('%s\n' % line)
+
+
+# Configure Dagman to not limit the number of times a node is put on hold
+with open(dagconfig, 'w') as f:
+    f.write('DAGMAN_MAX_JOB_HOLDS = 0')
+
+print 'DAG written to: ' + dagpath
+print 'Submit using: condor_submit_dag %s' % dagpath
