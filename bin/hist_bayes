@@ -16,7 +16,7 @@ parser.add_argument("directories", nargs='+')
 parser.add_argument("-d", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
 parser.add_argument("--extension", default="_B.txt")
-parser.add_argument("--nbins", default=100)
+parser.add_argument("--nbins", default=100, type=int)
 parser.add_argument("--separate", action="store_true")
 parser.add_argument("--log-scale", action="store_true")
 parser.add_argument("--normed", action="store_true")
@@ -32,7 +32,7 @@ if len(models) > 2:
     sys.exit(1)
 labels = args.labels
 if labels is None and len(models) == 2:
-    labels = ["0", "1"]
+    labels = ["%i" % d for d in range(len(outdirs))]
 
 bayes_factors = []
 
@@ -51,10 +51,10 @@ if len(models) == 2 and isinstance(models, list):
             b_file = os.path.join(outdir, "out_%s_*%s" % (m, b_ext))
             # loop over all Bayes factor files output from lalapps_ppen
             for bf in glob.glob(b_file):
-                logB[m].append(np.loadtxt(b_file)[0])
+                logB[m].append(np.loadtxt(bf)[0])
         # take difference between models for each instantiation
         for (lb0, lb1) in zip(logB[models[0]], logB[models[1]]):
-            logB_m0_m1.append(lb0 - lb1)
+            logB_m0_m1_single.append(lb0 - lb1)
         # add list of differnces to main array
         logB_m0_m1.append(logB_m0_m1_single)
 
@@ -64,14 +64,14 @@ elif len(models) == 1 or isinstance(models, basestring):
     else:
         m = models[0]
     print "Comparing %s to noise-only model." % m
-    xlabel = "$log(B^%s_n)$" % m
+    xlabel = r"$log(B^{%s}_n)$" % m
     logB_m0_m1 = []
     for outdir in outdirs:
         b_file = os.path.join(outdir, "out_%s_*%s" % (m, b_ext))
         # loop over all Bayes factor files output from lalapps_ppen
         logB = []
         for bf in glob.glob(b_file):
-            logB.append(np.loadtxt(b_file)[0])
+            logB.append(np.loadtxt(bf)[0])
         logB_m0_m1.append(logB)
 else:
     print "Error: invalid models: %r" % models
@@ -84,11 +84,10 @@ for n in range(len(logB_m0_m1)):
         plt.figure()
 
     if isinstance(labels, list):
-        label = label[n]
+        label = labels[n]
     else:
         label = labels
-
-    plt.hist(logB_m0_m1[n], args.nbis, log=args.log, histtype='step',
+    plt.hist(logB_m0_m1[n], args.nbins, log=args.log_scale, histtype='step',
              normed=args.normed, label=label)
 
     if args.separate:
