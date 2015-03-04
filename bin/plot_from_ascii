@@ -2,17 +2,28 @@
 
 import sys
 import numpy as np
+import argparse
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-commandname, inputfile, outputfile = sys.argv
-
 '''
 Takes path to an ASCII file containing PSR data in the usual (time, real, imag)
 format. Returns a plot, saved to the path specified by the second argument.
 '''
+
+parser = argparse.ArgumentParser()
+parser.add_argument("inputfile")
+parser.add_argument("outputfile")
+parser.add_argument("--start", default=0, type=int)
+parser.add_argument("--stop", default=-1, type=int)
+
+args =  parser.parse_args()
+inputfile = args.inputfile
+outputfile = args.outputfile
+ix0 = args.start
+ixf = args.stop
 
 # load data
 input_data = np.loadtxt(inputfile)
@@ -21,8 +32,8 @@ data = input_data[:, 1] + 1j * input_data[:, 2]
 
 # plot
 plt.figure()
-plt.plot(time, data.real, 'b', label='Re')
-plt.plot(time, data.imag, 'r', label='Im')
+plt.plot(time[ix0:ixf], data.real[ix0:ixf], 'b', label='Re')
+plt.plot(time[ix0:ixf], data.imag[ix0:ixf], 'r', label='Im')
 plt.ylabel('h (strain)')
 plt.xlabel('Time (GPS)')
 plt.xlim(time[0], time[-1])

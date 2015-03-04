@@ -37,6 +37,7 @@ parser.add_argument("--polHTC", default=None, type=str, help="polHTC root dir")
 parser.add_argument("--real-std", action="store_true")
 parser.add_argument("--gzip", action="store_true")
 parser.add_argument("--no-overwrite", action="store_true")
+parser.add_argument("--save-signal", action="store_true")
 
 args = parser.parse_args()
 verbose = args.verbose
@@ -155,7 +156,10 @@ if injtmp:
     pair.det.load_vectors(time, filename=psrname)
     inc = pair.psr.param['INC']
     pol = pair.psr.param['POL']
-    data += args.h0 * pair.signal(injtmp, pol, inc, PHI0)
+    signal = args.h0 * pair.signal(injtmp, pol, inc, PHI0)
+    data += signal
+    if args.save_signal:
+      np.savetxt("%s_signal_only%s" % (filename, extension), zip(time, signal.real, signal.imag), delimiter="\t")
     # find effective injection strength
     h = [args.h0 * ap(inc, PHI0) for _, ap in
          pair.Signal.templates[injtmp].iteritems()]
