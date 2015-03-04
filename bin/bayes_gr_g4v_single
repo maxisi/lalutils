@@ -157,7 +157,7 @@ for det in detectors:
                    psrname, det)
 
 if args.inject_c22 is not None:
-    injectstring = "--inject-file %s" % injectfile
+    injectstring = "--inject-file %s --inject-output %s" % (injectfile, os.path.join(ppeoutput, "injection_M_$(instID).txt"))
 else:
     injectstring = ""
 
@@ -171,7 +171,7 @@ subGRlines = [
     ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
     '--ensembleStretch 1 --ensembleWalk 1 --detectors %s %s"'
     % (parfile, datapath, outGRstring, priorGRfile, args.Nlive, detstring,
-    injectstring),
+    injectstring.replace('M', 'gr')),
     'Output = %sgr_$(instID).out' % logsdir,
     'Error = %sgr_$(instID).err' % logsdir,
     'Log = %sgr_$(instID).log' % logsdir,
@@ -189,7 +189,7 @@ subG4vlines = [
     ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
     '--ensembleStretch 1 --ensembleWalk 1 --nonGR G4v --detectors %s %s"'
     % (parfile, datapath, outG4vstring, priorG4vfile, args.Nlive, detstring,
-    injectstring),
+    injectstring.replace('M', 'g4v')),
     'Output = %sg4v_$(instID).out' % logsdir,
     'Error = %sg4v_$(instID).err' % logsdir,
     'Log = %sg4v_$(instID).log' % logsdir,

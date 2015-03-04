@@ -9,6 +9,20 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+mplparams = {
+    'text.usetex': True,  # use LaTeX for all text
+    'axes.linewidth': 1,  # set axes linewidths to 0.5
+    'axes.grid': False,  # add a grid
+    'axes.labelweight': 'normal',
+    #'axes.axisbelow': True,
+    #'grid.linestyle': '-',  # grid as solid lines not dashed
+    #'grid.color': 'gray',  # grid lines grey
+    #'grid.linewidth': 0.5,
+    'font.family': 'serif',
+    'font.size': 24
+}
+matplotlib.rcParams.update(mplparams)
+
 default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
 
 parser = argparse.ArgumentParser()
@@ -34,12 +48,10 @@ labels = args.labels
 if labels is None and len(models) == 2:
     labels = ["%i" % d for d in range(len(outdirs))]
 
-bayes_factors = []
-
 # LOAD DATA
 if len(models) == 2 and isinstance(models, list):
     print "Comparing %s to %s." % (models[0], models[1])
-    xlabel = "$log(B^%s_%s)$" % (models[0], models[1])
+    xlabel = "$log(B^{%s}_{%s})$" % (models[0], models[1])
     # array to contain list of relative log Bayes factors
     logB_m0_m1 = []
     for outdir in outdirs:
@@ -64,7 +76,7 @@ elif len(models) == 1 or isinstance(models, basestring):
     else:
         m = models[0]
     print "Comparing %s to noise-only model." % m
-    xlabel = r"$log(B^{%s}_n)$" % m
+    xlabel = r"$log(B^{%s}_{n})$" % m
     logB_m0_m1 = []
     for outdir in outdirs:
         b_file = os.path.join(outdir, "out_%s_*%s" % (m, b_ext))
@@ -92,6 +104,7 @@ for n in range(len(logB_m0_m1)):
 
     if args.separate:
         plt.xlabel(xlabel)
+        plt.legend(numpoints=1, prop={'size': 14})
         if args.normed:
             plt.ylabel("Normed count")
         else:
@@ -102,6 +115,7 @@ for n in range(len(logB_m0_m1)):
 
 if not args.separate:
     plt.xlabel(xlabel)
+    plt.legend(numpoints=1, prop={'size': 14})
     if args.normed:
         plt.ylabel("Normed count")
     else:
