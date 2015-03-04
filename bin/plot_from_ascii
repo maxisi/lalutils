@@ -36,7 +36,7 @@ plt.plot(time[ix0:ixf], data.real[ix0:ixf], 'b', label='Re')
 plt.plot(time[ix0:ixf], data.imag[ix0:ixf], 'r', label='Im')
 plt.ylabel('h (strain)')
 plt.xlabel('Time (GPS)')
-plt.xlim(time[0], time[-1])
+plt.xlim(time[ix0], time[ixf])
 plt.legend(numpoints=1)
 
 plt.savefig(outputfile, bbox_inches='tight')

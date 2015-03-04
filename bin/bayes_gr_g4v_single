@@ -81,10 +81,10 @@ if psrname != "J0534+2200":
     exit(1)
 else:
     parlines = [
-        "RAJ 10:11:12.5643",
-        "DECJ -21:45:54.7855",
-        "F0 100.0",
-        "F1 1e-15",
+        "RAJ 05:34:31.973",
+        "DECJ +22:00:52.06", 
+        "F0 30.2254370 ",
+        "F1 -3.86228e-10",
         "PEPOCH 54000.0"
     ]
     parfile = os.path.join(ppeconfig, "pulsar.par")
