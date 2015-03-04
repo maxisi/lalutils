@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--detectors", nargs='+', default=["H1", "L1"])
 parser.add_argument("-r", "--runs", nargs='+', default=["S5", "S6"])
 parser.add_argument("-p", "--pulsars", nargs='+', default=None)
-parser.add_argument("--ninst", default=10000, type=int,
+parser.add_argument("--ninst", default=100, type=int,
                     help="Number of instantiations to produce.")
 parser.add_argument("--polHTC", default=None, help="path to polHTC.")
 parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
@@ -140,7 +140,7 @@ with open(dagpath, 'w') as f:
                         'VARS %s psr="%s"' % (jobname, psr),
                         'VARS %s det="%s"' % (jobname, det),
                         'VARS %s run="%s"' % (jobname, run),
-                        'VARS %s ninst="%s"' % (jobname, str(ninst)),
+                        'VARS %s ninst="%i"' % (jobname, ninst),
                         'VARS %s output_path="%s"' % (jobname, output_path),
                         'RETRY %s 2' % jobname,  # retry job 2 times
                         '\n'
@@ -154,5 +154,5 @@ with open(dagpath, 'w') as f:
 with open(dagconfig, 'w') as f:
     f.write('DAGMAN_MAX_JOB_HOLDS = 0')
 
-print 'DAG written to: ' + dagpath
-print 'Submit using: condor_submit_dag %s' % dagpath
+print "DAG written. Submit using:"
+print "condor_submit_dag %s" % dagpath
