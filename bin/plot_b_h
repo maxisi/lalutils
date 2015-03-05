@@ -1,0 +1,114 @@
+#! /usr/bin/env python
+
+import os
+import sys
+import glob
+import argparse
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+mplparams = {
+    'text.usetex': True,  # use LaTeX for all text
+    'axes.linewidth': 1,  # set axes linewidths to 0.5
+    'axes.grid': False,  # add a grid
+    'axes.labelweight': 'normal',
+    #'axes.axisbelow': True,
+    #'grid.linestyle': '-',  # grid as solid lines not dashed
+    #'grid.color': 'gray',  # grid lines grey
+    #'grid.linewidth': 0.5,
+    'font.family': 'serif',
+    'font.size': 24
+}
+matplotlib.rcParams.update(mplparams)
+
+default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
+
+parser = argparse.ArgumentParser()
+parser.add_argument("directories")
+parser.add_argument("injectdirs")
+parser.add_argument("-o", "--output", default=default_output)
+parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
+parser.add_argument("--bfilename", default="out_(M)_*_B.txt")
+parser.add_argument("--injectfilename", default="inject_GR_*.txt")
+parser.add_argument("--injecmodel", default="GR")
+parser.add_argument("--separate", action="store_true")
+parser.add_argument("--log-scale", action="store_true")
+parser.add_argument("--labels", nargs='+', default=None)
+parser.add_argument("--legend-loc", default="best")
+
+args = parser.parse_args()
+outdirs = [args.directories]
+bname = args.bfilename
+fig_name, fig_ext = os.path.splitext(args.output)
+models = args.models
+if len(models) > 2:
+    print "Error: cannot compare more than 2 models."
+    sys.exit(1)
+labels = args.labels
+if labels is None and len(models) == 2:
+    labels = ["%i" % d for d in range(len(outdirs))]
+
+# LOAD DATA
+if len(models) == 2 and isinstance(models, list):
+    print "Comparing %s to %s." % (models[0], models[1])
+    ylabel = "$log(B^{%s}_{%s})$" % (models[0], models[1])
+    # array to contain list of relative log Bayes factors
+    logB_m0_m1 = []
+    for outdir in outdirs:
+        # list of rlB's for a given directory
+        logB_m0_m1_single = []
+        logB = {}
+        for m in models:
+            logB[m] = []
+            b_file = os.path.join(outdir, bname.replace("(M)", m))
+            # loop over all Bayes factor files output from lalapps_ppen
+            for bf in glob.glob(b_file):
+                logB[m].append(np.loadtxt(bf)[0])
+        # take difference between models for each instantiation
+        for (lb0, lb1) in zip(logB[models[0]], logB[models[1]]):
+            logB_m0_m1_single.append(lb0 - lb1)
+        # add list of differnces to main array
+        logB_m0_m1.append(logB_m0_m1_single)
+
+elif len(models) == 1 or isinstance(models, basestring):
+    if isinstance(models, basestring):
+        m = models
+    else:
+        m = models[0]
+    print "Comparing %s to noise-only model." % m
+    ylabel = r"$log(B^{%s}_{n})$" % m
+    logB_m0_m1 = []
+    for outdir in outdirs:
+        b_file = os.path.join(outdir, bname.replace("(M)", m))
+        print b_file
+        # loop over all Bayes factor files output from lalapps_ppen
+        logB = []
+        for bf in glob.glob(b_file):
+            logB.append(np.loadtxt(bf)[0])
+        logB_m0_m1.append(logB)
+else:
+    print "Error: invalid models: %r" % models
+    sys.exit(1)
+
+# LOAD INJECTION STRENGTHS
+h0 = []
+for n in range(len(logB_m0_m1[0])):
+    with open(args.injectdirs, 'r') as f:
+        for line in f:
+            parval = f.readline().split(' ')
+            if parval[0] == "C22":
+                h0.append(float(parval[1]))
+
+# PLOT
+plt.figure()
+for n in range(len(logB_m0_m1)):
+    plt.plot(h0, logB_m0_m1[n])
+
+plt.xlabel(r"h_{\rm GR}")
+plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
+plt.ylabel(ylabel)
+plt.savefig(args.output, bbox_inches='tight')
+
+plt.close()
