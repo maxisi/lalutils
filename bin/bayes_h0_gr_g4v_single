@@ -75,8 +75,7 @@ logsdir = os.path.join(basedir, "htc/", "logs/")
 
 ppeconfig = basedir
 
-ppeoutput = os.path.join(args.output_dir, "b_h0_GR_G4v_%s_%s/" %
-                         (psrname, injmodel))
+ppeoutput = os.path.abspath(args.output_dir)
 
 injspath = os.path.join(basedir, "injections/")
 
@@ -100,10 +99,10 @@ for directory in [logsdir, ppeconfig, ppeoutput, injspath]:
 
 for det in args.detectors:
     filename = os.path.join(args.data_dir, "%s/" % run, "%s/" % det,
-                            "rehet_%s_%s_$*.%s" % (psrname, det, dataext))
-    if len(filename) < ninst:
-        print "ERROR: not enough %s %s %s datasets to run %i times. " \
-              "Try again with a smaller --ninst." % (psrname, run, det, ninst)
+                            "rehet_%s_%s_*%s" % (psrname, det, dataext))
+    if len(glob.glob(filename)) < ninst:
+        print "ERROR: not enough %s %s %s datasets to run %i times in %s. " \
+              "Try again with a smaller --ninst." % (psrname, run, det, ninst, filename)
         sys.exit(1)
 
 
@@ -165,7 +164,7 @@ if args.h0_range is None:
     for det in detectors:
         # load first instantiation of data to estimate standard deviation
         filename = os.path.join(args.data_dir, "%s/" % run, "%s/" % det,
-                                "rehet_%s_%s_0.%s" % (psrname, det, dataext))
+                                "rehet_%s_%s_0%s" % (psrname, det, dataext))
         data_re = np.loadtxt(filename)[:, 1]
         h0_magnitude.append(int(np.round(np.log10(abs(np.std(data_re)))) - 1))
     h0 = np.linspace(1E-27, 10 ** max(h0_magnitude), ninst)
@@ -217,7 +216,7 @@ if injmodel == "GR":
 elif injmodel == "G4v":
     injectstring = "--inject-nonGR G4v --inject-file %s" % injectfile
 
-outGRstring = os.path.join(ppeoutput, "out_GR_$(instID).txt")
+outGRstring = os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_$(instID).txt" % (psrname, run, det, injmodel))
 
 subGRlines = [
     'Universe = Standard',
@@ -235,7 +234,7 @@ subGRlines = [
     'Queue'
 ]
 
-outG4vstring = os.path.join(ppeoutput, "out_G4v_$(instID).txt")
+outG4vstring = os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_$(instID).txt" % (psrname, run, det, injmodel))
 
 subG4vlines = [
     'Universe = Standard',
@@ -273,7 +272,7 @@ with open(dagpath, 'w') as f:
         for instID in range(ninst):
             gr_jobname = "gr_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                 instID)
-            outGRstring = os.path.join(ppeoutput, "out_GR_%i.txt" % instID)
+            outGRstring = os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID))
             gr_lines = [
                 '# GR %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (gr_jobname, subpath_GR),
@@ -288,7 +287,7 @@ with open(dagpath, 'w') as f:
 
             g4v_jobname = "g4v_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                   instID)
-            outG4vstring = os.path.join(ppeoutput, "out_GR_%i.txt" % instID)
+            outG4vstring = os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID))
             g4v_lines = [
                 '# G4v %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (g4v_jobname, subpath_G4v),
