@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("directories", nargs='+')
 parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
-parser.add_argument("--extension", default="_B.txt")
+parser.add_argument("--bfilename", default="out_(M)_*_B.txt")
 parser.add_argument("--nbins", default=100, type=int)
 parser.add_argument("--separate", action="store_true")
 parser.add_argument("--log-scale", action="store_true")
@@ -39,7 +39,7 @@ parser.add_argument("--legend-loc", default="best")
 
 args = parser.parse_args()
 outdirs = args.directories
-b_ext = args.extension
+bname = args.bfilename
 fig_name, fig_ext = os.path.splitext(args.output)
 models = args.models
 if len(models) > 2:
@@ -61,7 +61,7 @@ if len(models) == 2 and isinstance(models, list):
         logB = {}
         for m in models:
             logB[m] = []
-            b_file = os.path.join(outdir, "out_%s_*%s" % (m, b_ext))
+            b_file = os.path.join(outdir, bname.replace("(M)", m))
             # loop over all Bayes factor files output from lalapps_ppen
             for bf in glob.glob(b_file):
                 logB[m].append(np.loadtxt(bf)[0])
@@ -80,7 +80,8 @@ elif len(models) == 1 or isinstance(models, basestring):
     xlabel = r"$log(B^{%s}_{n})$" % m
     logB_m0_m1 = []
     for outdir in outdirs:
-        b_file = os.path.join(outdir, "out_%s_*%s" % (m, b_ext))
+        b_file = os.path.join(outdir, bname.replace("(M)", m))
+        print b_file
         # loop over all Bayes factor files output from lalapps_ppen
         logB = []
         for bf in glob.glob(b_file):

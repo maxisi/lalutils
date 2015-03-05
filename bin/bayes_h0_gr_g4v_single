@@ -30,10 +30,9 @@ parser.add_argument("--phi0-range", nargs='+', default=[0, 2 * np.pi],
 parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
 parser.add_argument("--Nlive", default=1000, type=int)
 parser.add_argument("--inject-model", default="GR")
-parser.add_argument("--LAL",
-                    default=os.path.join(os.getcwd(), "lscsoft/opt/nonGRcw/"))
+parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
 #parser.add_argument("--polHTC", default=None, help="Path to polHTC.")
-parser.add_argument("--data-extension", default=".gz")
+parser.add_argument("--data-extension", default="gz")
 parser.add_argument("-v", "--verbose", action="store_true")
 
 args = parser.parse_args()
@@ -44,6 +43,7 @@ injmodel = args.inject_model
 ninst = args.ninst
 
 dataext = args.data_extension
+datadir = os.path.abspath(args.data_dir)
 
 basedir = os.path.join(os.path.abspath(args.base_dir),
                        "b_h0_GR_G4v_%s_%s/" % (psrname, injmodel))
@@ -68,20 +68,21 @@ dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-executable = os.path.join(args.LAL,
-                          "/bin/lalapps_pulsar_parameter_estimation_nested")
+executable = os.path.join(args.LAL, "bin/", "lalapps_pulsar_parameter_estimation_nested")
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
 ppeconfig = basedir
 
-ppeoutput = os.path.abspath(args.output_dir)
+ppeoutput = os.path.abspath(os.path.join(basedir, 'rawoutput/'))
 
 injspath = os.path.join(basedir, "injections/")
 
+prescript = os.path.join(os.path.dirname(__file__),
+                          "bayes_h0_gr_g4v_single_pre")
+
 postscript = os.path.join(os.path.dirname(__file__),
                           "bayes_h0_gr_g4v_single_post")
-
 try:
     os.makedirs(basedir)
 except OSError:
@@ -92,13 +93,13 @@ for directory in [logsdir, ppeconfig, ppeoutput, injspath]:
     try:
         os.makedirs(directory)
     except OSError:
-        pass
+        print "WARNING: %s already exists." % directory
 
 ###############################################################################
 # CHECK INPUT DATA
 
 for det in args.detectors:
-    filename = os.path.join(args.data_dir, "%s/" % run, "%s/" % det,
+    filename = os.path.join(datadir, "%s/" % run, "%s/" % det,
                             "rehet_%s_%s_*%s" % (psrname, det, dataext))
     if len(glob.glob(filename)) < ninst:
         print "ERROR: not enough %s %s %s datasets to run %i times in %s. " \
@@ -163,8 +164,8 @@ if args.h0_range is None:
     h0_magnitude = []
     for det in detectors:
         # load first instantiation of data to estimate standard deviation
-        filename = os.path.join(args.data_dir, "%s/" % run, "%s/" % det,
-                                "rehet_%s_%s_0%s" % (psrname, det, dataext))
+        filename = os.path.join(datadir, "%s/" % run, "%s/" % det,
+                                "rehet_%s_%s_0.%s" % (psrname, det, dataext))
         data_re = np.loadtxt(filename)[:, 1]
         h0_magnitude.append(int(np.round(np.log10(abs(np.std(data_re)))) - 1))
     h0 = np.linspace(1E-27, 10 ** max(h0_magnitude), ninst)
@@ -207,7 +208,7 @@ datapath = ""
 for det in detectors:
     detstring += "%s " % det
     datapath += "%srehet_%s_%s_$(instID).%s " \
-                % (os.path.join(args.data_dir, "%s/" % run, "%s/" % det),
+                % (os.path.join(datadir, "%s/" % run, "%s/" % det),
                    psrname, det, dataext)
 
 injectfile = os.path.join(injspath, "inject_%s_$(instID).par" % injmodel)
@@ -272,13 +273,15 @@ with open(dagpath, 'w') as f:
         for instID in range(ninst):
             gr_jobname = "gr_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                 instID)
-            outGRstring = os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID))
+            outGRstring = os.path.abspath(os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID)))
             gr_lines = [
                 '# GR %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (gr_jobname, subpath_GR),
                 'VARS %s instID="%i"' % (gr_jobname, instID),
-                'SCRIPT POST %s %s "%s %s"' % (gr_jobname, postscript,
-                outGRstring, basedir),
+               # 'SCRIPT PRE %s %s "%s"' % (gr_jobname, prescript,
+               # outGRstring),
+                #'SCRIPT POST %s %s "%s %s"' % (gr_jobname, postscript,
+            #    outGRstring, basedir),
                 '\n'
             ]
 
@@ -287,13 +290,15 @@ with open(dagpath, 'w') as f:
 
             g4v_jobname = "g4v_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                   instID)
-            outG4vstring = os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID))
+            outG4vstring = os.path.abspath(os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID)))
             g4v_lines = [
                 '# G4v %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (g4v_jobname, subpath_G4v),
                 'VARS %s instID="%i"' % (g4v_jobname, instID),
-                'SCRIPT POST %s %s "%s %s"' % (g4v_jobname, postscript,
-                outG4vstring, basedir),
+             #   'SCRIPT PRE %s %s "%s"' % (g4v_jobname, prescript,
+             #   outG4vstring),
+              #  'SCRIPT POST %s %s "%s %s"' % (g4v_jobname, postscript,
+              #  outG4vstring, basedir),
                 '\n'
             ]
 
