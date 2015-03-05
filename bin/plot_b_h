@@ -28,19 +28,13 @@ default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
 parser = argparse.ArgumentParser()
 parser.add_argument("directories")
 parser.add_argument("injectdirs")
+parser.add_argument("ninst")
 parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
-parser.add_argument("--bfilename", default="out_(M)_*_B.txt")
-parser.add_argument("--injectfilename", default="inject_GR")
-parser.add_argument("--injecmodel", default="GR")
-parser.add_argument("--separate", action="store_true")
-parser.add_argument("--log-scale", action="store_true")
-parser.add_argument("--labels", nargs='+', default=None)
 parser.add_argument("--legend-loc", default="best")
 
 args = parser.parse_args()
-outdirs = [args.directories]
-bname = args.bfilename
+bdir = args.directories
 fig_name, fig_ext = os.path.splitext(args.output)
 models = args.models
 if len(models) > 2:
@@ -48,7 +42,7 @@ if len(models) > 2:
     sys.exit(1)
 labels = args.labels
 if labels is None and len(models) == 2:
-    labels = ["%i" % d for d in range(len(outdirs))]
+    labels = ["%i" % d for d in range(len(bdir))]
 
 # LOAD DATA
 if len(models) == 2 and isinstance(models, list):
@@ -56,21 +50,17 @@ if len(models) == 2 and isinstance(models, list):
     ylabel = "$log(B^{%s}_{%s})$" % (models[0], models[1])
     # array to contain list of relative log Bayes factors
     logB_m0_m1 = []
-    for outdir in outdirs:
-        # list of rlB's for a given directory
-        logB_m0_m1_single = []
-        logB = {}
-        for m in models:
-            logB[m] = []
-            b_file = os.path.join(outdir, bname.replace("(M)", m))
-            # loop over all Bayes factor files output from lalapps_ppen
-            for bf in glob.glob(b_file):
-                logB[m].append(np.loadtxt(bf)[0])
-        # take difference between models for each instantiation
-        for (lb0, lb1) in zip(logB[models[0]], logB[models[1]]):
-            logB_m0_m1_single.append(lb0 - lb1)
-        # add list of differnces to main array
-        logB_m0_m1.append(logB_m0_m1_single)
+    # list of rlB's for a given directory
+    logB = {}
+    for m in models:
+        logB[m] = []
+        # loop over all Bayes factor files output from lalapps_ppen
+        for n in range(args.ninst):
+            bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_GR_%i.txt_B.txt" % (m, n))
+            logB[m].append(np.loadtxt(bf)[0])
+    # take difference between models for each instantiation
+    for (lb0, lb1) in zip(logB[models[0]], logB[models[1]]):
+        logB_m0_m1.append(lb0 - lb1)
 
 elif len(models) == 1 or isinstance(models, basestring):
     if isinstance(models, basestring):
@@ -80,22 +70,19 @@ elif len(models) == 1 or isinstance(models, basestring):
     print "Comparing %s to noise-only model." % m
     ylabel = r"$log(B^{%s}_{n})$" % m
     logB_m0_m1 = []
-    for outdir in outdirs:
-        b_file = os.path.join(outdir, bname.replace("(M)", m))
-        print b_file
-        # loop over all Bayes factor files output from lalapps_ppen
-        logB = []
-        for bf in glob.glob(b_file):
-            logB.append(np.loadtxt(bf)[0])
-        logB_m0_m1.append(logB)
+    for n in range(args.ninst):
+        bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_GR_%i.txt_B.txt" % (m, n))
+        logB_m0_m1[m].append(np.loadtxt(bf)[0])
+
 else:
     print "Error: invalid models: %r" % models
     sys.exit(1)
 
+
 # LOAD INJECTION STRENGTHS
 h0 = []
-for n in range(len(logB_m0_m1[0])):
-    with open(args.injectdirs + args.injectfilename + "_" + str(n) + ".par", 'r') as f:
+for n in range(args.ninst):
+    with open(os.path.join(args.injectdirs, "inject_GR_%i.par" % n), 'r') as f:
         for line in f:
             parval = line.split(' ')
             if parval[0] == "C22":
