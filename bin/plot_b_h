@@ -31,7 +31,7 @@ parser.add_argument("injectdirs")
 parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
 parser.add_argument("--bfilename", default="out_(M)_*_B.txt")
-parser.add_argument("--injectfilename", default="inject_GR_*.txt")
+parser.add_argument("--injectfilename", default="inject_GR")
 parser.add_argument("--injecmodel", default="GR")
 parser.add_argument("--separate", action="store_true")
 parser.add_argument("--log-scale", action="store_true")
@@ -95,16 +95,16 @@ else:
 # LOAD INJECTION STRENGTHS
 h0 = []
 for n in range(len(logB_m0_m1[0])):
-    with open(args.injectdirs, 'r') as f:
+    with open(args.injectdirs + args.injectfilename + "_" + str(n) + ".par", 'r') as f:
         for line in f:
-            parval = f.readline().split(' ')
+            parval = line.split(' ')
             if parval[0] == "C22":
                 h0.append(float(parval[1]))
 
 # PLOT
 plt.figure()
 for n in range(len(logB_m0_m1)):
-    plt.plot(h0, logB_m0_m1[n])
+    plt.plot(h0, logB_m0_m1[n], '+')
 
 plt.xlabel(r"h_{\rm GR}")
 plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
