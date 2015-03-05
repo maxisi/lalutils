@@ -1,0 +1,10 @@
+#!/bin/bash
+
+OUTPUTFILE=$1
+BASEDIR=$2
+
+mkdir -p "$BASEDIR"/logB
+
+mv "$OUTPUTFILE"*_B* "$BASEDIR"/logB/
+
+rm $OUTPUTFILE*
