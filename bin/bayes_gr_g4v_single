@@ -33,8 +33,12 @@ detectors = args.detectors
 psrname = args.pulsar
 run = args.run
 ninst = args.ninst
+if args.inject_c22 is None:
+  injectstring = "0"
+else:
+  injectstring = "%.1e" % args.inject_c22
 basedir = os.path.join(os.path.abspath(args.base_dir),
-                       "bayes_GR_G4v_%s/" % psrname)
+                       "bayes_GR_G4v_%s_%s/" % (psrname, injectstring))
 verbose = args.verbose
 
 #if args.polHTC:

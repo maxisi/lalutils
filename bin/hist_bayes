@@ -27,7 +27,7 @@ default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("directories", nargs='+')
-parser.add_argument("-d", "--output", default=default_output)
+parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
 parser.add_argument("--extension", default="_B.txt")
 parser.add_argument("--nbins", default=100, type=int)
@@ -35,6 +35,7 @@ parser.add_argument("--separate", action="store_true")
 parser.add_argument("--log-scale", action="store_true")
 parser.add_argument("--normed", action="store_true")
 parser.add_argument("--labels", nargs='+', default=None)
+parser.add_argument("--legend-loc", default="best")
 
 args = parser.parse_args()
 outdirs = args.directories
@@ -104,7 +105,7 @@ for n in range(len(logB_m0_m1)):
 
     if args.separate:
         plt.xlabel(xlabel)
-        plt.legend(numpoints=1, prop={'size': 14})
+        plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
         if args.normed:
             plt.ylabel("Normed count")
         else:
@@ -115,7 +116,7 @@ for n in range(len(logB_m0_m1)):
 
 if not args.separate:
     plt.xlabel(xlabel)
-    plt.legend(numpoints=1, prop={'size': 14})
+    plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
     if args.normed:
         plt.ylabel("Normed count")
     else:
