@@ -28,26 +28,25 @@ default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
 parser = argparse.ArgumentParser()
 parser.add_argument("directories")
 parser.add_argument("injectdirs")
-parser.add_argument("ninst")
+parser.add_argument("ninst", type=int)
+parser.add_argument("--inject-model", default='GR')
 parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
 parser.add_argument("--legend-loc", default="best")
 
 args = parser.parse_args()
 bdir = args.directories
+im = args.inject_model
 fig_name, fig_ext = os.path.splitext(args.output)
 models = args.models
 if len(models) > 2:
     print "Error: cannot compare more than 2 models."
     sys.exit(1)
-labels = args.labels
-if labels is None and len(models) == 2:
-    labels = ["%i" % d for d in range(len(bdir))]
 
 # LOAD DATA
 if len(models) == 2 and isinstance(models, list):
     print "Comparing %s to %s." % (models[0], models[1])
-    ylabel = "$log(B^{%s}_{%s})$" % (models[0], models[1])
+    ylabel = r"$\log(B^{\rm %s}_{\rm %s})$" % (models[0], models[1])
     # array to contain list of relative log Bayes factors
     logB_m0_m1 = []
     # list of rlB's for a given directory
@@ -56,7 +55,7 @@ if len(models) == 2 and isinstance(models, list):
         logB[m] = []
         # loop over all Bayes factor files output from lalapps_ppen
         for n in range(args.ninst):
-            bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_GR_%i.txt_B.txt" % (m, n))
+            bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_%s_%i.txt_B.txt" % (m, im, n))
             logB[m].append(np.loadtxt(bf)[0])
     # take difference between models for each instantiation
     for (lb0, lb1) in zip(logB[models[0]], logB[models[1]]):
@@ -68,11 +67,11 @@ elif len(models) == 1 or isinstance(models, basestring):
     else:
         m = models[0]
     print "Comparing %s to noise-only model." % m
-    ylabel = r"$log(B^{%s}_{n})$" % m
+    ylabel = r"$\log(B^{\rm %s}_{\rm n})$" % m
     logB_m0_m1 = []
     for n in range(args.ninst):
-        bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_GR_%i.txt_B.txt" % (m, n))
-        logB_m0_m1[m].append(np.loadtxt(bf)[0])
+        bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_%s_%i.txt_B.txt" % (m, im, n))
+        logB_m0_m1.append(np.loadtxt(bf)[0])
 
 else:
     print "Error: invalid models: %r" % models
@@ -82,18 +81,19 @@ else:
 # LOAD INJECTION STRENGTHS
 h0 = []
 for n in range(args.ninst):
-    with open(os.path.join(args.injectdirs, "inject_GR_%i.par" % n), 'r') as f:
+    with open(os.path.join(args.injectdirs, "inject_%s_%i.par" % (im, n)), 'r') as f:
         for line in f:
             parval = line.split(' ')
-            if parval[0] == "C22":
-                h0.append(float(parval[1]))
+            if im == "GR" and parval[0].lower() == "c22":
+                h0.append(2.0*float(parval[1]))
+            elif im == "G4v" and parval[0].lower() == "h0":
+                h0.append(2.0*float(parval[1]))
 
 # PLOT
 plt.figure()
-for n in range(len(logB_m0_m1)):
-    plt.plot(h0, logB_m0_m1[n], '+')
+plt.plot(h0, logB_m0_m1, '+')
 
-plt.xlabel(r"h_{\rm GR}")
+plt.xlabel(r"h_{\rm %s}" % im)
 plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
 plt.ylabel(ylabel)
 plt.savefig(args.output, bbox_inches='tight')
