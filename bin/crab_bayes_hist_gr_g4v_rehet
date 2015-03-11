@@ -233,7 +233,7 @@ with open(dagpath, 'w') as f:
                 '# GR %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (gr_jobname, subpath_GR),
                 'VARS %s instID="%i"' % (gr_jobname, instID),
-                'VARS %S rehetFreq="%.6e"' % (gr_jobname, FREQ_ARRAY[instID]),
+                'VARS %s rehetFreq="%.6e"' % (gr_jobname, FREQ_ARRAY[instID]),
                 '\n'
             ]
 
@@ -245,7 +245,7 @@ with open(dagpath, 'w') as f:
                 '# G4v %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (g4v_jobname, subpath_G4v),
                 'VARS %s instID="%i"' % (g4v_jobname, instID),
-                'VARS %S rehetFreq="%.6e"' % (gr_jobname, FREQ_ARRAY[instID]),
+                'VARS %s rehetFreq="%.6e"' % (g4v_jobname, FREQ_ARRAY[instID]),
                 '\n'
             ]
 
