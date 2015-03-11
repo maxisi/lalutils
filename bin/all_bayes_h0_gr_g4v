@@ -1,0 +1,313 @@
+#! /usr/bin/env python
+
+import os
+import glob
+import sys
+import random
+import argparse
+import numpy as np
+
+
+"""
+Using lalapps_pulsar_parameter_estimation_nested, analyzes different
+instantiations of PSR data, injecting progressively louder signals (default
+model: GR).
+"""
+
+# ##############################################################################
+# PARSE ARGUMENTS
+parser = argparse.ArgumentParser()
+# Required arguments
+parser.add_argument("--data")
+parser.add_argument("--pulsars")
+parser.add_argument("--ninst", default=100, type=int,
+                    help="Number of instantiations to produce.")
+# Optional arguments
+parser.add_argument("--detectors", nargs='+', default=["H1", "L1"])
+parser.add_argument("--runs", default=None)
+parser.add_argument("--Nlive", default=1000, type=int)
+parser.add_argument("--inject-model", default="GR")
+parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
+#parser.add_argument("--polHTC", default=None, help="Path to polHTC.")
+parser.add_argument("--data-extension", default="gz")
+parser.add_argument("-v", "--verbose", action="store_true")
+
+args = parser.parse_args()
+detectors = args.detectors
+run = args.run
+psrname = args.pulsar
+injmodel = args.inject_model
+ninst = args.ninst
+
+dataext = args.data_extension
+datadir = os.path.abspath(args.data_dir)
+
+basedir = os.path.join(os.getcwd(), "b_h0_GR_G4v_%s_%s/" % (psrname, injmodel))
+verbose = args.verbose
+
+if injmodel not in ["GR", "G4v"]:
+    print "ERROR: unsupported injection model."
+    sys.exit(1)
+
+#if args.polHTC:
+#    sys.path.append(args.polHTC)
+#from polHTC import general as g
+
+###############################################################################
+# DIRECTORY STRUCTURE AND PATHS
+
+subpath_GR = os.path.join(basedir, "htc/", "ppe_GR.sub")
+
+subpath_G4v = os.path.join(basedir, "htc/", "ppe_G4v.sub")
+
+dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
+
+dagconfig = os.path.join(basedir, "htc/", "dagman.config")
+
+executable = os.path.join(args.LAL, "bin/", "lalapps_pulsar_parameter_estimation_nested")
+
+logsdir = os.path.join(basedir, "htc/", "logs/")
+
+ppeconfig = basedir
+
+ppeoutput = os.path.abspath(os.path.join(basedir, 'rawoutput/'))
+
+injspath = os.path.join(basedir, "injections/")
+
+prescript = os.path.join(os.path.dirname(__file__),
+                          "bayes_h0_gr_g4v_single_pre")
+
+postscript = os.path.join(os.path.dirname(__file__),
+                          "bayes_h0_gr_g4v_single_post")
+try:
+    os.makedirs(basedir)
+except OSError:
+    print "WARNING: base directory already exists " \
+          "and data might be overwritten."
+
+for directory in [logsdir, ppeconfig, ppeoutput, injspath]:
+    try:
+        os.makedirs(directory)
+    except OSError:
+        print "WARNING: %s already exists." % directory
+
+###############################################################################
+# CHECK INPUT DATA
+
+for det in args.detectors:
+    filename = os.path.join(datadir, "%s/" % run, "%s/" % det,
+                            "rehet_%s_%s_*%s" % (psrname, det, dataext))
+    if len(glob.glob(filename)) < ninst:
+        print "ERROR: not enough %s %s %s datasets to run %i times in %s. " \
+              "Try again with a smaller --ninst." % (psrname, run, det, ninst, filename)
+        sys.exit(1)
+
+
+###############################################################################
+# WRITE PULSAR.PAR
+
+if psrname != "J0534+2200":
+    print "Only Crab currently supported!"
+    exit(1)
+else:
+    parlines = [
+        "RAJ 05:34:31.973",
+        "DECJ +22:00:52.06",
+        "F0 30.2254370 ",
+        "F1 -3.86228e-10",
+        "PEPOCH 54000.0"
+    ]
+    parfile = os.path.join(ppeconfig, "pulsar.par")
+    with open(parfile, "w") as f:
+        for line in parlines:
+            f.write("%s\n" % line)
+
+###############################################################################
+# WRITE PRIOR.TXT's
+
+priorGRlines = [
+    "C22 uniform 0 1e-21",
+    "psi uniform -0.785398163397448 0.785398163397448",
+    "phi22 uniform 0 6.283185307179586",
+    "cosiota uniform -1 1"
+]
+
+priorG4vlines = [
+    "PSI uniform -0.785398163397448 0.785398163397448",
+    "H0 uniform 0 2e-21",  # recall h0 =2*C22
+    "IOTA uniform 0 6.28318530718",
+    "PHI0VECTOR uniform 0 6.28318530718"
+]
+
+priorGRfile = os.path.join(ppeconfig, "prior_GR.txt")
+with open(priorGRfile, "w") as f:
+    for line in priorGRlines:
+        f.write("%s\n" % line)
+
+priorG4vfile = os.path.join(ppeconfig, "prior_G4v.txt")
+with open(priorG4vfile, "w") as f:
+    for line in priorG4vlines:
+        f.write("%s\n" % line)
+
+###############################################################################
+# WRITE INJECTION FILES
+
+random.seed(2)
+phi0 = [random.uniform(0, 2*np.pi)
+        for n in range(ninst)]
+
+if args.h0_range is None:
+    h0_magnitude = []
+    for det in detectors:
+        # load first instantiation of data to estimate standard deviation
+        filename = os.path.join(datadir, "%s/" % run, "%s/" % det,
+                                "rehet_%s_%s_0.%s" % (psrname, det, dataext))
+        data_re = np.loadtxt(filename)[:, 1]
+        h0_magnitude.append(int(np.round(np.log10(abs(np.std(data_re)))) - 1))
+    h0 = np.linspace(1E-27, 10 ** max(h0_magnitude), ninst)
+elif (not isinstance(args.h0_range, list)) or len(args.h0_range) != 2:
+    print "ERROR: invalid injection range."
+    sys.exit(1)
+else:
+    h0 = np.linspace(args.h0_range[0], args.h0_range[1], ninst)
+
+# THIS IS VALID ONLY FOR THE CRAB
+injectlines = [
+    "RAJ 05:34:31.973",
+    "DECJ +22:00:52.06",
+    "F0 30.2254370",
+    "F1 -3.86228e-10",
+    "PEPOCH 54000.0",
+    "PSI 2.16420827"
+]
+
+for n in range(ninst):
+    injectfile = os.path.join(injspath, "inject_%s_%i.par" % (injmodel, n))
+    with open(injectfile, "w") as f:
+        for line in injectlines:
+            f.write("%s\n" % line)
+        if injmodel == "GR":
+            f.write("COSIOTA 0.48\n")
+            f.write("C22 %.6e\n" % h0[n])
+            f.write("PHI22 %.6f\n" % phi0[n])
+        elif injmodel == "G4v":
+            f.write("IOTA 1.0699\n")
+            f.write("H0 %.6e\n" % h0[n])
+            f.write("PHI0VECTOR %.6f\n" % phi0[n])
+
+
+###############################################################################
+# WRITE SUBMITS
+
+detstring = ""
+datapath = ""
+for det in detectors:
+    detstring += "%s " % det
+    datapath += "%srehet_%s_%s_$(instID).%s " \
+                % (os.path.join(datadir, "%s/" % run, "%s/" % det),
+                   psrname, det, dataext)
+
+injectfile = os.path.join(injspath, "inject_%s_$(instID).par" % injmodel)
+if injmodel == "GR":
+    injectstring = "--inject-file %s" % injectfile
+elif injmodel == "G4v":
+    injectstring = "--inject-nonGR G4v --inject-file %s" % injectfile
+
+outGRstring = os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_$(instID).txt" % (psrname, run, det, injmodel))
+
+subGRlines = [
+    'Universe = Standard',
+    'Executable = %s' % executable,
+    'initialdir = %s' % basedir,
+    'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
+    ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
+    '--ensembleStretch 1 --ensembleWalk 1 --detectors %s %s"'
+    % (parfile, datapath, outGRstring, priorGRfile, args.Nlive, detstring,
+       injectstring),
+    'Output = %sgr_$(instID).out' % logsdir,
+    'Error = %sgr_$(instID).err' % logsdir,
+    'Log = %sgr_$(instID).log' % logsdir,
+    'getenv = true',
+    'Queue'
+]
+
+outG4vstring = os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_$(instID).txt" % (psrname, run, det, injmodel))
+
+subG4vlines = [
+    'Universe = Standard',
+    'Executable = %s' % executable,
+    'initialdir = %s' % basedir,
+    'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
+    ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
+    '--ensembleStretch 1 --ensembleWalk 1 --nonGR G4v --detectors %s %s"'
+    % (parfile, datapath, outG4vstring, priorG4vfile, args.Nlive, detstring,
+       injectstring.replace('M', 'g4v')),
+    'Output = %sg4v_$(instID).out' % logsdir,
+    'Error = %sg4v_$(instID).err' % logsdir,
+    'Log = %sg4v_$(instID).log' % logsdir,
+    'getenv = true',
+    'Queue'
+]
+
+with open(subpath_GR, 'w') as f:
+    for line in subGRlines:
+        f.write('%s\n' % line)
+
+with open(subpath_G4v, 'w') as f:
+    for line in subG4vlines:
+        f.write('%s\n' % line)
+
+
+###############################################################################
+# WRITE DAG
+
+with open(dagpath, 'w') as f:
+    # Point to configuration file with DAGman variables:
+    f.write('CONFIG %s\n\n' % dagconfig)
+
+    for det in detectors:
+        for instID in range(ninst):
+            gr_jobname = "gr_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
+                                                instID)
+            outGRstring = os.path.abspath(os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID)))
+            gr_lines = [
+                '# GR %s %s %s %i' % (run, det, psrname, instID),
+                'JOB %s %s' % (gr_jobname, subpath_GR),
+                'VARS %s instID="%i"' % (gr_jobname, instID),
+               # 'SCRIPT PRE %s %s "%s"' % (gr_jobname, prescript,
+               # outGRstring),
+                #'SCRIPT POST %s %s "%s %s"' % (gr_jobname, postscript,
+            #    outGRstring, basedir),
+                '\n'
+            ]
+
+            for line in gr_lines:
+                f.write('%s\n' % line)
+
+            g4v_jobname = "g4v_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
+                                                  instID)
+            outG4vstring = os.path.abspath(os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID)))
+            g4v_lines = [
+                '# G4v %s %s %s %i' % (run, det, psrname, instID),
+                'JOB %s %s' % (g4v_jobname, subpath_G4v),
+                'VARS %s instID="%i"' % (g4v_jobname, instID),
+             #   'SCRIPT PRE %s %s "%s"' % (g4v_jobname, prescript,
+             #   outG4vstring),
+              #  'SCRIPT POST %s %s "%s %s"' % (g4v_jobname, postscript,
+              #  outG4vstring, basedir),
+                '\n'
+            ]
+
+            for line in g4v_lines:
+                f.write('%s\n' % line)
+
+
+# Configure Dagman to not limit the number of times a node is put on hold
+with open(dagconfig, 'w') as f:
+    f.write('DAGMAN_MAX_JOB_HOLDS = 0')
+
+print 'DAG written to: ' + dagpath
+print 'Submit using: condor_submit_dag %s' % dagpath
+
+if ninst > 500:
+    print "(Consider specifying -maxjobs )"

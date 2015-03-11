@@ -46,7 +46,7 @@ dagpath = os.path.join(basedir, "htc/", "rehetbank.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-exepath = os.path.join(os.path.dirname(__file__), "create_dataset")
+exepath = os.path.join(os.path.dirname(__file__), "create_cw_data")
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
