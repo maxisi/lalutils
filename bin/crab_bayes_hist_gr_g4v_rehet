@@ -20,11 +20,12 @@ parser.add_argument("data_dir")
 parser.add_argument("-d", "--detectors", nargs='+', default=["H1"])
 parser.add_argument("-r", "--run", default="S5")
 parser.add_argument("-p", "--pulsar", default="J0534+2200")
-parser.add_argument("--ninst", default=1000, type=int,
+parser.add_argument("--ninst", default=200, type=int,
                     help="Number of instantiations to produce.")
 parser.add_argument("--inject-c22", default=None, type=float)
 parser.add_argument("--inject-phi22", default=None, type=float)
 parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
+parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
 parser.add_argument("-v", "--verbose", action="store_true")
 parser.add_argument("--Nlive", default=1000, type=int)
 
@@ -52,7 +53,8 @@ dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-executable = "/home/max.isi/lscsoft/opt/nonGRcw/bin/lalapps_pulsar_parameter_estimation_nested"
+executable = os.path.join(args.LAL,
+                          "bin/lalapps_pulsar_parameter_estimation_nested")
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
@@ -146,6 +148,12 @@ if args.inject_c22 is not None:
             f.write("%s\n" % line)
 
 ###############################################################################
+# SETUP RE-HETERODYNES
+
+FREQ_RANGE = [1.0e-7, 0.85e-3]
+FREQ_ARRAY = np.linspace(FREQ_RANGE[0], FREQ_RANGE[1], ninst)
+
+###############################################################################
 # WRITE SUBMITS
 
 detstring = ""
@@ -157,7 +165,10 @@ for det in detectors:
                    psrname, det)
 
 if args.inject_c22 is not None:
-    injectstring = "--inject-file %s --inject-output %s" % (injectfile, os.path.join(ppeoutput, "injection_M_$(instID).txt"))
+    injectstring = "--inject-file %s " \
+                   "--inject-output %s"\
+                   % (injectfile,
+                      os.path.join(ppeoutput, "injection_M_$(instID).txt"))
 else:
     injectstring = ""
 
@@ -169,7 +180,8 @@ subGRlines = [
     'initialdir = %s' % basedir,
     'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
     ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
-    '--ensembleStretch 1 --ensembleWalk 1 --detectors %s %s"'
+    '--ensembleStretch 1 --ensembleWalk 1 --reheterodyne $(rehetFreq) '
+    '--detectors %s %s"'
     % (parfile, datapath, outGRstring, priorGRfile, args.Nlive, detstring,
     injectstring.replace('M', 'gr')),
     'Output = %sgr_$(instID).out' % logsdir,
@@ -187,7 +199,8 @@ subG4vlines = [
     'initialdir = %s' % basedir,
     'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
     ' --prior-file %s --Nlive %i --kDTree 0 --diffev 0 --covariance 0 '
-    '--ensembleStretch 1 --ensembleWalk 1 --nonGR G4v --detectors %s %s"'
+    '--ensembleStretch 1 --ensembleWalk 1 --reheterodyne $(rehetFreq) '
+    '--nonGR G4v --detectors %s %s"'
     % (parfile, datapath, outG4vstring, priorG4vfile, args.Nlive, detstring,
     injectstring.replace('M', 'g4v')),
     'Output = %sg4v_$(instID).out' % logsdir,
@@ -220,6 +233,7 @@ with open(dagpath, 'w') as f:
                 '# GR %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (gr_jobname, subpath_GR),
                 'VARS %s instID="%i"' % (gr_jobname, instID),
+                'VARS %S rehetFreq="%.6e"' % (gr_jobname, FREQ_ARRAY[instID]),
                 '\n'
             ]
 
@@ -231,6 +245,7 @@ with open(dagpath, 'w') as f:
                 '# G4v %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (g4v_jobname, subpath_G4v),
                 'VARS %s instID="%i"' % (g4v_jobname, instID),
+                'VARS %S rehetFreq="%.6e"' % (gr_jobname, FREQ_ARRAY[instID]),
                 '\n'
             ]
 
@@ -243,4 +258,4 @@ with open(dagconfig, 'w') as f:
     f.write('DAGMAN_MAX_JOB_HOLDS = 0')
 
 print 'DAG written to: ' + dagpath
-print 'Submit using: condor_submit_dag %s' % dagpath
+print 'Submit using: condor_submit_dag -maxjobs 500 %s' % dagpath
