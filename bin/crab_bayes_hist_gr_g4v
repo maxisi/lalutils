@@ -219,9 +219,9 @@ with open(subpath_GR, 'w') as f:
     for line in subGRlines:
         f.write('%s\n' % line)
 
-# with open(subpath_G4v, 'w') as f:
-#     for line in subG4vlines:
-#         f.write('%s\n' % line)
+with open(subpath_G4v, 'w') as f:
+    for line in subG4vlines:
+        f.write('%s\n' % line)
 
 
 ##############################################################################
@@ -252,8 +252,8 @@ with open(dagpath, 'w') as f:
                 '\n'
             ]
 
-#             for line in g4v_lines:
-#                 f.write('%s\n' % line)
+            for line in g4v_lines:
+                f.write('%s\n' % line)
 
 
 # Configure Dagman to not limit the number of times a node is put on hold
