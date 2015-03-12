@@ -27,6 +27,7 @@ parser.add_argument("--inject-phi22", default=None, type=float)
 parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
 parser.add_argument("-v", "--verbose", action="store_true")
 parser.add_argument("--Nlive", default=1000, type=int)
+parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw_condor/")
 
 args = parser.parse_args()
 detectors = args.detectors
@@ -37,24 +38,31 @@ if args.inject_c22 is None:
   injectstring = "0"
 else:
   injectstring = "%.1e" % args.inject_c22
-basedir = os.path.join(os.path.abspath(args.base_dir),
-                       "bayes_GR_G4v_%s_%s/" % (psrname, injectstring))
+basedir = os.path.join(args.base_dir, "bayes_GR_G4v_%s_%s/" % (psrname, injectstring))
+print basedir
+dataroot = args.data_dir
 verbose = args.verbose
+
+if not os.path.isdir(dataroot):
+    print "Error: invalid data directory %r" & dataroot
+    sys.exit(1)
 
 ###############################################################################
 # DIRECTORY STRUCTURE AND PATHS
 
-subpath_GR = os.path.join(basedir, "htc/", "ppe_GR.sub")
+htcdir = os.path.join(basedir, "htc/")
 
-subpath_G4v = os.path.join(basedir, "htc/", "ppe_G4v.sub")
+subpath_GR = os.path.join(htcdir, "ppe_GR.sub")
 
-dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
+subpath_G4v = os.path.join(htcdir, "ppe_G4v.sub")
 
-dagconfig = os.path.join(basedir, "htc/", "dagman.config")
+dagpath = os.path.join(htcdir, "ppe_GR_G4v.dag")
 
-executable = "/home/max.isi/lscsoft/opt/nonGRcw/bin/lalapps_pulsar_parameter_estimation_nested"
+dagconfig = os.path.join(htcdir, "dagman.config")
 
-logsdir = os.path.join(basedir, "htc/", "logs/")
+executable = os.path.join(args.LAL, "bin/lalapps_pulsar_parameter_estimation_nested")
+
+logsdir = "/usr1/max.isi/" #os.path.join(htcdir, "logs/")
 
 ppeconfig = os.path.join(basedir, "config/")
 
@@ -66,7 +74,7 @@ except OSError:
     print "WARNING: base directory already exists " \
           "and data might be overwritten."
 
-for directory in [logsdir, ppeconfig, ppeoutput]:
+for directory in [logsdir, htcdir, ppeconfig, ppeoutput]:
     try:
         os.makedirs(directory)
     except OSError:
@@ -153,7 +161,7 @@ datapath = ""
 for det in detectors:
     detstring += "%s " % det
     datapath += "%srehet_%s_%s_$(instID).gz " \
-                % (os.path.join(args.data_dir, "%s/" % run, "%s/" % det),
+                % (os.path.join(dataroot, "%s/" % run, "%s/" % det),
                    psrname, det)
 
 if args.inject_c22 is not None:
@@ -201,12 +209,12 @@ with open(subpath_GR, 'w') as f:
     for line in subGRlines:
         f.write('%s\n' % line)
 
-with open(subpath_G4v, 'w') as f:
-    for line in subG4vlines:
-        f.write('%s\n' % line)
+# with open(subpath_G4v, 'w') as f:
+#     for line in subG4vlines:
+#         f.write('%s\n' % line)
 
 
-###############################################################################
+##############################################################################
 # WRITE DAG
 
 with open(dagpath, 'w') as f:
@@ -234,8 +242,8 @@ with open(dagpath, 'w') as f:
                 '\n'
             ]
 
-            for line in g4v_lines:
-                f.write('%s\n' % line)
+#             for line in g4v_lines:
+#                 f.write('%s\n' % line)
 
 
 # Configure Dagman to not limit the number of times a node is put on hold

@@ -53,8 +53,8 @@ dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-executable = os.path.join(args.LAL,
-                          "bin/lalapps_pulsar_parameter_estimation_nested")
+executable = os.path.abspath(os.path.join(args.LAL,
+                          "bin/lalapps_pulsar_parameter_estimation_nested"))
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
@@ -160,7 +160,7 @@ detstring = ""
 datapath = ""
 for det in detectors:
     detstring += "%s " % det
-    datapath += "%srehet_%s_%s_$(instID).gz " \
+    datapath += "%srehet_%s_%s.gz" \
                 % (os.path.join(args.data_dir, "%s/" % run, "%s/" % det),
                    psrname, det)
 
