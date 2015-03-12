@@ -1,7 +1,9 @@
 #! /usr/bin/env python
 
 import os
+import getpass
 import sys
+import socket
 import random
 import argparse
 import numpy as np
@@ -62,7 +64,15 @@ dagconfig = os.path.join(htcdir, "dagman.config")
 
 executable = os.path.join(args.LAL, "bin/lalapps_pulsar_parameter_estimation_nested")
 
-logsdir = "/atlas/user/atlas5/max.isi/"#"/usr1/max.isi/" #os.path.join(htcdir, "logs/")
+hostname = socket.gethostname()
+username = getpass.getuser()
+
+if "atlas" in hostname:
+    logsdir = "/atlas/user/atlas5/%s/" % username
+elif "ldas" in hostname:
+    logsdir = "/usr1/%s/" % username
+else:
+    logsdir = os.path.join(htcdir, "logs/")
 
 ppeconfig = os.path.join(basedir, "config/")
 
