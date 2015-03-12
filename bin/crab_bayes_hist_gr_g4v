@@ -62,7 +62,7 @@ dagconfig = os.path.join(htcdir, "dagman.config")
 
 executable = os.path.join(args.LAL, "bin/lalapps_pulsar_parameter_estimation_nested")
 
-logsdir = "/usr1/max.isi/" #os.path.join(htcdir, "logs/")
+logsdir = "/atlas/user/atlas5/max.isi/"#"/usr1/max.isi/" #os.path.join(htcdir, "logs/")
 
 ppeconfig = os.path.join(basedir, "config/")
 
