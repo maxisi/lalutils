@@ -182,7 +182,7 @@ else:
 outGRstring = os.path.join(ppeoutput, "out_gr_$(instID).txt")
 
 subGRlines = [
-    'Universe = Standard',
+    'Universe = Vanilla',
     'Executable = %s' % executable,
     'initialdir = %s' % basedir,
     'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
@@ -200,7 +200,7 @@ subGRlines = [
 outG4vstring = os.path.join(ppeoutput, "out_g4v_$(instID).txt")
 
 subG4vlines = [
-    'Universe = Standard',
+    'Universe = Vanilla',
     'Executable = %s' % executable,
     'initialdir = %s' % basedir,
     'arguments = "--par-file %s --input-files %s --outfile %s --non-fixed-only'
