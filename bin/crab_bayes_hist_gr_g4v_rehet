@@ -152,7 +152,7 @@ if args.inject_c22 is not None:
             f.write("PHI22 %.6f\n" % phi22)
         elif injmodel=="g4v":
             f.write("IOTA 1.0699\n")
-            f.write("H0 %.6e\n" % 2*args.inject_c22)
+            f.write("H0 %.6e\n" % (2.0*args.inject_c22))
             f.write("PHI0VECTOR %.6e\n" % args.inject_phi22)
         else:
             print "Error: cannot inject %r. Only GR and G4v available."\
