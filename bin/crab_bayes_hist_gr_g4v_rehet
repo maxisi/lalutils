@@ -24,6 +24,7 @@ parser.add_argument("--ninst", default=200, type=int,
                     help="Number of instantiations to produce.")
 parser.add_argument("--inject-c22", default=None, type=float)
 parser.add_argument("--inject-phi22", default=None, type=float)
+parser.add_argument("--inject-model", default="gr")
 parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
 parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
 parser.add_argument("-v", "--verbose", action="store_true")
@@ -38,8 +39,10 @@ if args.inject_c22 is None:
   injectstring = "0"
 else:
   injectstring = "%.1e" % args.inject_c22
+injmodel = args.inject_model.lower()
 basedir = os.path.join(os.path.abspath(args.base_dir),
-                       "bayes_GR_G4v_%s_%s/" % (psrname, injectstring))
+                       "bayes_GR_G4v_%s_inj_%s_%s/"\
+                       % (psrname, injmodel, injectstring))
 verbose = args.verbose
 
 ###############################################################################
@@ -137,15 +140,24 @@ if args.inject_c22 is not None:
         "F0 30.2254370",
         "F1 -3.86228e-10",
         "PEPOCH 54000.0",
-        "PSI 2.16420827",
-        "COSIOTA 0.48",
-        "C22 %.6e" % args.inject_c22,
-        "PHI22 %.6f " % phi22
+        "PSI 2.16420827"
     ]
     injectfile = os.path.join(ppeconfig, "inject.txt")
     with open(injectfile, "w") as f:
         for line in injectlines:
             f.write("%s\n" % line)
+        if injmodel=="gr":
+            f.write("COSIOTA 0.48\n")
+            f.write("C22 %.6e\n" % args.inject_c22)
+            f.write("PHI22 %.6f\n" % phi22)
+        elif injmodel=="g4v":
+            f.write("IOTA 1.0699\n")
+            f.write("H0 %.6e\n" % 2*args.inject_c22)
+            f.write("PHI0VECTOR %.6e\n" % args.inject_phi22)
+        else:
+            print "Error: cannot inject %r. Only GR and G4v available."\
+                  % args.inject_model
+            sys.exit(1)
 
 ###############################################################################
 # SETUP RE-HETERODYNES
@@ -169,6 +181,8 @@ if args.inject_c22 is not None:
                    "--inject-output %s"\
                    % (injectfile,
                       os.path.join(ppeoutput, "injection_M_$(instID).txt"))
+    if injmodel=="g4v":
+        injectstring = "--inject-nonGR G4v %s" % injectstring
 else:
     injectstring = ""
 
