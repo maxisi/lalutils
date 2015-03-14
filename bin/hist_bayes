@@ -5,11 +5,13 @@ import sys
 import glob
 import argparse
 import numpy as np
+from scipy import stats
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 mplparams = {
+    'backend' : 'png',
     'text.usetex': True,  # use LaTeX for all text
     'axes.linewidth': 1,  # set axes linewidths to 0.5
     'axes.grid': False,  # add a grid
@@ -19,7 +21,9 @@ mplparams = {
     #'grid.color': 'gray',  # grid lines grey
     #'grid.linewidth': 0.5,
     'font.family': 'serif',
-    'font.size': 24
+    'font.size': 24,
+    'font.weight': 'normal',
+    'font.serif': 'Computer Modern Roman'
 }
 matplotlib.rcParams.update(mplparams)
 
@@ -31,16 +35,28 @@ parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['g4v', 'gr'])
 parser.add_argument("--bfilename", default="out_(M)_*_B.txt")
 parser.add_argument("--nbins", default=100, type=int)
-parser.add_argument("--separate", action="store_true")
 parser.add_argument("--log-scale", action="store_true")
 parser.add_argument("--normed", action="store_true")
 parser.add_argument("--labels", nargs='+', default=None)
 parser.add_argument("--legend-loc", default="best")
+parser.add_argument("--gkde", action="store_true")
+parser.add_argument("--gkde-only", action="store_true")
+parser.add_argument("--gkde-cov", type=float, default=None)
+parser.add_argument("--gkde-lw", type=float, default=2)
+parser.add_argument("--gkde-ls", default="dashed")
+parser.add_argument("--gkde-alpha", type=float, default=0.5)
+parser.add_argument("--cmap", default=None)
+parser.add_argument("--colors", default=None, nargs='+')
+parser.add_argument("--xlim", default=None, nargs='+', type=float)
+parser.add_argument("--ylim", default=None, nargs='+', type=float)
+parser.add_argument("--alpha", default=0.5, type=float)
 
 args = parser.parse_args()
 outdirs = args.directories
 bname = args.bfilename
 fig_name, fig_ext = os.path.splitext(args.output)
+plot_gkde = args.gkde or args.gkde_only
+normed = args.normed or plot_gkde
 models = args.models
 if len(models) > 2:
     print "Error: cannot compare more than 2 models."
@@ -52,7 +68,7 @@ if labels is None and len(models) == 2:
 # LOAD DATA
 if len(models) == 2 and isinstance(models, list):
     print "Comparing %s to %s." % (models[0], models[1])
-    xlabel = "$log(B^{%s}_{%s})$" % (models[0], models[1])
+    xlabel = r"$\ln B^{%s}_{%s}$" % (models[0], models[1])
     # array to contain list of relative log Bayes factors
     logB_m0_m1 = []
     for outdir in outdirs:
@@ -77,7 +93,7 @@ elif len(models) == 1 or isinstance(models, basestring):
     else:
         m = models[0]
     print "Comparing %s to noise-only model." % m
-    xlabel = r"$log(B^{%s}_{n})$" % m
+    xlabel = r"$\ln B^{%s}_{n}$" % m
     logB_m0_m1 = []
     for outdir in outdirs:
         b_file = os.path.join(outdir, bname.replace("(M)", m))
@@ -91,37 +107,71 @@ else:
     print "Error: invalid models: %r" % models
     sys.exit(1)
 
+# Determine histogram range
+bmin = np.inf
+bmax = - np.inf
+for bset in logB_m0_m1:
+    bmin = min(bmin, min(bset))
+    bmax = max(bmax, max(bset))
+
+# Perform Gaussian kernel density estimation if requested
+if plot_gkde:
+    xvector = np.linspace(bmin, bmax, 5.0*args.nbins)
+    gkdepdfs = []
+    for bset in logB_m0_m1:
+        gkde = stats.gaussian_kde(bset)
+        if args.gkde_cov is not None:
+            gkde.covariance_factor = lambda : args.gkde_cov
+            gkde._compute_covariance()
+        gkdepdfs.append(gkde.evaluate(xvector))
+    gkde_line = {
+                  "ls" : args.gkde_ls,
+                  "alpha" : args.gkde_alpha,
+                  "lw" : args.gkde_lw
+                }
+
 # PLOT
 plt.figure()
-for n in range(len(logB_m0_m1)):
-    if args.separate:
-        plt.figure()
+nlines = len(logB_m0_m1)
+if args.colors is not None and len(args.colors)==nlines:
+    colors = args.colors
+elif args.cmap is not None:
+    cidx = np.linspace(0, 1, nlines) # color index
+    cmap = matplotlib.cm.get_cmap(args.cmap) # color map
+    colors = [cmap(cidx[i]) for i in range(nlines)]
+else:
+    colors = [None for i in range(nlines)]
 
+for n in range(nlines):
     if isinstance(labels, list):
-        label = labels[n]
+        label = r"%s" % labels[n]
     else:
         label = labels
-    plt.hist(logB_m0_m1[n], args.nbins, log=args.log_scale, histtype='step',
-             normed=args.normed, label=label)
 
-    if args.separate:
-        plt.xlabel(xlabel)
-        plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
-        if args.normed:
-            plt.ylabel("Normed count")
-        else:
-            plt.ylabel("Count")
-        fig_file = os.path.join(fig_name,"_%i%s" % (n, fig_ext))
-        plt.savefig(fig_file, bbox_inches='tight')
-        plt.close()
+    if not args.gkde_only:
+        plt.hist(logB_m0_m1[n], args.nbins, range=(bmin, bmax),
+                log=args.log_scale, histtype='stepfilled',
+                normed=normed, label=label, linewidth=0, facecolor=colors[n], alpha=args.alpha)
 
-if not args.separate:
-    plt.xlabel(xlabel)
+    if plot_gkde:
+        if label is not None:
+            label = r"%s (GKDE)" % label
+        elif label is None:
+            label = r"GKDE"
+        
+        plt.plot(xvector, gkdepdfs[n], label=label, color=colors[n], **gkde_line)
+
+plt.xlabel(xlabel)
+if args.xlim is not None:
+    plt.xlim(*args.xlim)
+if args.ylim is not None:
+    plt.ylim(*args.ylim)
+if label is not None:
     plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
-    if args.normed:
-        plt.ylabel("Normed count")
-    else:
-        plt.ylabel("Count")
-    plt.savefig(args.output, bbox_inches='tight')
+if normed:
+    plt.ylabel(r"$P($%s$)$" % xlabel)
+else:
+    plt.ylabel("Count")
+plt.savefig(args.output, bbox_inches='tight')
 
 plt.close()
