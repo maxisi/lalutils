@@ -26,7 +26,7 @@ parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
 parser.add_argument("--Nlive", default=1000, type=int)
 parser.add_argument("--inject-model", default="GR")
 parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
-parser.add_argument("--h0-range", nargs='+', default=None, type=float)
+parser.add_argument("--c22-range", nargs='+', default=None, type=float)
 parser.add_argument("--phi0-range", nargs='+', default=[0, 2 * np.pi],
                     type=float)
 parser.add_argument("--data-extension", default="gz")
@@ -147,20 +147,20 @@ random.seed(2)
 phi0 = [random.uniform(args.phi0_range[0], args.phi0_range[1])
         for n in range(ninst)]
 
-if args.h0_range is None:
-    h0_magnitude = []
+if args.c22_range is None:
+    c22_magnitude = []
     for det in detectors:
         # load data to estimate standard deviation
         filename = os.path.join(datadir, "%s/" % run, "%s/" % det,
                                 "rehet_%s_%s.%s" % (psrname, det, dataext))
         data_re = np.loadtxt(filename)[:, 1]
-        h0_magnitude.append(int(np.round(np.log10(abs(np.std(data_re)))) - 1))
-    h0 = np.linspace(1E-27, 10 ** max(h0_magnitude), ninst)
-elif (not isinstance(args.h0_range, list)) or len(args.h0_range) != 2:
+        c22_magnitude.append(int(np.round(np.log10(abs(np.std(data_re)))) - 1))
+    c22 = np.linspace(1E-27, 10 ** max(c22_magnitude), ninst)
+elif (not isinstance(args.c22_range, list)) or len(args.c22_range) != 2:
     print "ERROR: invalid injection range."
     sys.exit(1)
 else:
-    h0 = np.linspace(args.h0_range[0], args.h0_range[1], ninst)
+    c22 = np.linspace(args.c22_range[0], args.c22_range[1], ninst)
 
 # THIS IS VALID ONLY FOR THE CRAB
 injectlines = [
@@ -179,11 +179,11 @@ for n in range(ninst):
             f.write("%s\n" % line)
         if injmodel == "GR":
             f.write("COSIOTA 0.48\n")
-            f.write("C22 %.6e\n" % h0[n])
+            f.write("C22 %.6e\n" % c22[n])
             f.write("PHI22 %.6f\n" % phi0[n])
         elif injmodel == "G4v":
             f.write("IOTA 1.0699\n")
-            f.write("H0 %.6e\n" % h0[n])
+            f.write("H0 %.6e\n" % 2.0*c22[n])
             f.write("PHI0VECTOR %.6f\n" % phi0[n])
 
 ###############################################################################
