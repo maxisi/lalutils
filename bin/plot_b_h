@@ -92,7 +92,7 @@ for n in range(args.ninst):
             if im == "GR" and parval[0].lower() == "c22":
                 h0.append(2.0*float(parval[1]))
             elif im == "G4v" and parval[0].lower() == "h0":
-                h0.append(2.0*float(parval[1]))
+                h0.append(float(parval[1]))
 
 # PLOT
 plt.figure()
