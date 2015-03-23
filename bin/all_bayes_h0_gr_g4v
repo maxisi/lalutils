@@ -11,7 +11,7 @@ import numpy as np
 """
 Using lalapps_pulsar_parameter_estimation_nested, analyzes different
 instantiations of PSR data, injecting progressively louder signals (default
-model: GR).
+model: GR). Makes use of the built-in reheterodyne feature.
 """
 
 # ##############################################################################
