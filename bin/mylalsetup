@@ -40,7 +40,7 @@ BRANCH=${@:$OPTIND:1}
     git clean -dfx &&
     git checkout "$BRANCH" &&
     ./00boot &&
-    ./configure --enable-condor --prefix=$OPTDIR/$BRANCH &&
+    ./configure --prefix=$OPTDIR/$BRANCH &&
     make -j install
   fi
 } && {

@@ -183,7 +183,7 @@ for n in range(ninst):
             f.write("PHI22 %.6f\n" % phi0[n])
         elif injmodel == "G4v":
             f.write("IOTA 1.0699\n")
-            f.write("H0 %.6e\n" % 2.0*c22[n])
+            f.write("H0 %.6e\n" % (2.0*c22[n]))
             f.write("PHI0VECTOR %.6f\n" % phi0[n])
 
 ###############################################################################
