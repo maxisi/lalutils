@@ -14,7 +14,7 @@ instantiations of PSR data, injecting progressively louder signals (default
 model: GR). Makes use of the built-in reheterodyne feature.
 """
 
-# ##############################################################################
+###############################################################################
 # PARSE ARGUMENTS
 parser = argparse.ArgumentParser()
 # Required arguments
@@ -28,7 +28,6 @@ parser.add_argument("--runs", default=None)
 parser.add_argument("--Nlive", default=1000, type=int)
 parser.add_argument("--inject-model", default="GR")
 parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
-#parser.add_argument("--polHTC", default=None, help="Path to polHTC.")
 parser.add_argument("--data-extension", default="gz")
 parser.add_argument("-v", "--verbose", action="store_true")
 
@@ -49,10 +48,6 @@ if injmodel not in ["GR", "G4v"]:
     print "ERROR: unsupported injection model."
     sys.exit(1)
 
-#if args.polHTC:
-#    sys.path.append(args.polHTC)
-#from polHTC import general as g
-
 ###############################################################################
 # DIRECTORY STRUCTURE AND PATHS
 
@@ -64,7 +59,8 @@ dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-executable = os.path.join(args.LAL, "bin/", "lalapps_pulsar_parameter_estimation_nested")
+executable = os.path.join(args.LAL, "bin/",
+                          "lalapps_pulsar_parameter_estimation_nested")
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
@@ -99,7 +95,8 @@ for det in args.detectors:
                             "rehet_%s_%s_*%s" % (psrname, det, dataext))
     if len(glob.glob(filename)) < ninst:
         print "ERROR: not enough %s %s %s datasets to run %i times in %s. " \
-              "Try again with a smaller --ninst." % (psrname, run, det, ninst, filename)
+              "Try again with a smaller --ninst." %\
+              (psrname, run, det, ninst, filename)
         sys.exit(1)
 
 
@@ -213,7 +210,9 @@ if injmodel == "GR":
 elif injmodel == "G4v":
     injectstring = "--inject-nonGR G4v --inject-file %s" % injectfile
 
-outGRstring = os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_$(instID).txt" % (psrname, run, det, injmodel))
+outGRstring = os.path.join(ppeoutput,
+                           "bvsh_out_gr_%s_%s_%s_%s_$(instID).txt" %
+                           (psrname, run, det, injmodel))
 
 subGRlines = [
     'Universe = Standard',
@@ -231,7 +230,9 @@ subGRlines = [
     'Queue'
 ]
 
-outG4vstring = os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_$(instID).txt" % (psrname, run, det, injmodel))
+outG4vstring = os.path.join(ppeoutput,
+                            "bvsh_out_g4v_%s_%s_%s_%s_$(instID).txt" %
+                            (psrname, run, det, injmodel))
 
 subG4vlines = [
     'Universe = Standard',
@@ -269,15 +270,13 @@ with open(dagpath, 'w') as f:
         for instID in range(ninst):
             gr_jobname = "gr_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                 instID)
-            outGRstring = os.path.abspath(os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID)))
+            outGRstring = os.path.abspath(
+                os.path.join(ppeoutput, "bvsh_out_gr_%s_%s_%s_%s_%i.txt" %
+                             (psrname, run, det, injmodel, instID)))
             gr_lines = [
                 '# GR %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (gr_jobname, subpath_GR),
                 'VARS %s instID="%i"' % (gr_jobname, instID),
-               # 'SCRIPT PRE %s %s "%s"' % (gr_jobname, prescript,
-               # outGRstring),
-                #'SCRIPT POST %s %s "%s %s"' % (gr_jobname, postscript,
-            #    outGRstring, basedir),
                 '\n'
             ]
 
@@ -286,15 +285,13 @@ with open(dagpath, 'w') as f:
 
             g4v_jobname = "g4v_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                   instID)
-            outG4vstring = os.path.abspath(os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_%i.txt" % (psrname, run, det, injmodel, instID)))
+            outG4vstring = os.path.abspath(
+                os.path.join(ppeoutput, "bvsh_out_g4v_%s_%s_%s_%s_%i.txt" %
+                             (psrname, run, det, injmodel, instID)))
             g4v_lines = [
                 '# G4v %s %s %s %i' % (run, det, psrname, instID),
                 'JOB %s %s' % (g4v_jobname, subpath_G4v),
                 'VARS %s instID="%i"' % (g4v_jobname, instID),
-             #   'SCRIPT PRE %s %s "%s"' % (g4v_jobname, prescript,
-             #   outG4vstring),
-              #  'SCRIPT POST %s %s "%s %s"' % (g4v_jobname, postscript,
-              #  outG4vstring, basedir),
                 '\n'
             ]
 

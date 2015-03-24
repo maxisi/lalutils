@@ -36,12 +36,12 @@ psrname = args.pulsar
 run = args.run
 ninst = args.ninst
 if args.inject_c22 is None:
-  injectstring = "0"
+    injectstring = "0"
 else:
-  injectstring = "%.1e" % args.inject_c22
+    injectstring = "%.1e" % args.inject_c22
 injmodel = args.inject_model.lower()
 basedir = os.path.join(os.path.abspath(args.base_dir),
-                       "bayes_GR_G4v_%s_inj_%s_%s/"\
+                       "bayes_GR_G4v_%s_inj_%s_%s/"
                        % (psrname, injmodel, injectstring))
 verbose = args.verbose
 
@@ -56,8 +56,8 @@ dagpath = os.path.join(basedir, "htc/", "ppe_GR_G4v.dag")
 
 dagconfig = os.path.join(basedir, "htc/", "dagman.config")
 
-executable = os.path.abspath(os.path.join(args.LAL,
-                          "bin/lalapps_pulsar_parameter_estimation_nested"))
+executable = os.path.abspath(
+    os.path.join(args.LAL, "bin/lalapps_pulsar_parameter_estimation_nested"))
 
 logsdir = os.path.join(basedir, "htc/", "logs/")
 
@@ -81,6 +81,7 @@ for directory in [logsdir, ppeconfig, ppeoutput]:
 ###############################################################################
 # WRITE PULSAR.PAR
 
+parfile = os.path.join(ppeconfig, "pulsar.par")
 if psrname != "J0534+2200":
     print "Only Crab currently supported!"
     exit(1)
@@ -92,7 +93,6 @@ else:
         "F1 -3.86228e-10",
         "PEPOCH 54000.0"
     ]
-    parfile = os.path.join(ppeconfig, "pulsar.par")
     with open(parfile, "w") as f:
         for line in parlines:
             f.write("%s\n" % line)
@@ -127,6 +127,7 @@ with open(priorG4vfile, "w") as f:
 ###############################################################################
 # WRITE INJECT.TXT
 
+injectfile = os.path.join(ppeconfig, "inject.txt")
 if args.inject_c22 is not None:
     if args.inject_phi22 < 0:
         # select random phi22
@@ -142,15 +143,14 @@ if args.inject_c22 is not None:
         "PEPOCH 54000.0",
         "PSI 2.16420827"
     ]
-    injectfile = os.path.join(ppeconfig, "inject.txt")
     with open(injectfile, "w") as f:
         for line in injectlines:
             f.write("%s\n" % line)
-        if injmodel=="gr":
+        if injmodel == "gr":
             f.write("COSIOTA 0.48\n")
             f.write("C22 %.6e\n" % args.inject_c22)
             f.write("PHI22 %.6f\n" % phi22)
-        elif injmodel=="g4v":
+        elif injmodel == "g4v":
             f.write("IOTA 1.0699\n")
             f.write("H0 %.6e\n" % (2.0*args.inject_c22))
             f.write("PHI0VECTOR %.6e\n" % args.inject_phi22)
@@ -181,7 +181,7 @@ if args.inject_c22 is not None:
                    "--inject-output %s"\
                    % (injectfile,
                       os.path.join(ppeoutput, "injection_M_$(instID).txt"))
-    if injmodel=="g4v":
+    if injmodel == "g4v":
         injectstring = "--inject-nonGR G4v %s" % injectstring
 else:
     injectstring = ""
