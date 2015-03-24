@@ -212,20 +212,24 @@ FREQ_ARRAY = np.linspace(FREQ_RANGE[0], FREQ_RANGE[1], ninst)
 ###############################################################################
 # WRITE SUBMITS
 
-detstring = ""
-datapath = ""
+ppe_arguments = {
+    "det": "",
+    "data": "",
+    "inject": "--inject-nonGR ST --inject-file %s" %
+              os.path.join(ppe_paths["inject"], "inject_ST_$(instID).par"),
+    "output": {
+        "GR": os.path.join(ppe_paths["output"],
+                           "bvsh_out_%s_GR_$(instID).txt" % psrname),
+        "ST": os.path.join(ppe_paths["output"],
+                           "bvsh_out_%s_ST_$(instID).txt" % psrname)
+    }
+}
+
 for det in detectors:
-    detstring += "%s " % det
-    datapath += "%srehet_%s_%s.%s " % (os.path.join(datadir, run, det),
-                                       psrname, det, dataext)
-
-injectfile = os.path.join(ppe_paths["inject"], "inject_ST_$(instID).par")
-
-injectstring = "--inject-nonGR ST --inject-file %s" % injectfile
-
-outGRstring = os.path.join(ppeoutput,
-                           "bvsh_out_gr_%s_%s_%s_%s_$(instID).txt" % (
-                               psrname, run, det, injmodel))
+    ppe_arguments["det"] += "%s " % det
+    ppe_arguments["data"] += "%srehet_%s_%s.%s " % \
+                             (os.path.join(datadir, run, det),
+                              psrname, det, dataext)
 
 subGRlines = [
     'Universe = Vanilla',
