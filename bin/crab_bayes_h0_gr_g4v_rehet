@@ -24,9 +24,10 @@ parser.add_argument("--ninst", default=1000, type=int,
                     help="Number of instantiations to produce.")
 parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
 parser.add_argument("--Nlive", default=1000, type=int)
+parser.add_argument("--search-models", nargs='+', default=["GR", "G4v"])
 parser.add_argument("--inject-model", default="GR")
 parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
-parser.add_argument("--c22-range", nargs='+', default=None, type=float)
+parser.add_argument("--c22-range", nargs='+', type=float)
 parser.add_argument("--phi0-range", nargs='+', default=[0, 2 * np.pi],
                     type=float)
 parser.add_argument("--data-extension", default="gz")
@@ -278,8 +279,9 @@ with open(dagpath, 'w') as f:
                 '\n'
             ]
 
-            for line in gr_lines:
-                f.write('%s\n' % line)
+            if "GR" in args.search_models:
+                for line in gr_lines:
+                    f.write('%s\n' % line)
 
             g4v_jobname = "g4v_%s_%s_%s_%s_%i" % (psrname, run, det, injmodel,
                                                   instID)
@@ -292,8 +294,9 @@ with open(dagpath, 'w') as f:
                 '\n'
             ]
 
-            for line in g4v_lines:
-                f.write('%s\n' % line)
+            if "G4v" in args.search_models:
+                for line in g4v_lines:
+                    f.write('%s\n' % line)
 
 
 # Configure Dagman to not limit the number of times a node is put on hold
