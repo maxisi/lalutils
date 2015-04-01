@@ -75,11 +75,12 @@ except OSError:
     print "WARNING: base directory already exists " \
           "and data might be overwritten."
 
-for directory in [paths["logs"], paths.values()]:
+for dirname, directory in paths.iteritems():
     if verbose:
         print directory
     try:
-        os.makedirs(directory)
+        if dirname not in ["dag", "dag_config", "exe"]:
+            os.makedirs(directory)
     except OSError:
         print "WARNING: %s already exists." % directory
 
@@ -144,10 +145,6 @@ for m in models:
 ###############################################################################
 # WRITE INJECTION FILES
 
-random.seed(2)
-phi0 = [random.uniform(args.phi0_range[0], args.phi0_range[1]) for n0 in ninst]
-phiB = [random.uniform(args.phi0_range[0], args.phi0_range[1]) for nB in ninst]
-
 if args.h0_range is None:
     h0_magnitude = []
     for det in detectors:
@@ -175,15 +172,18 @@ injectlines = [
 ]
 
 n = 0
+random.seed(2)
 for h0 in h0_list:
+    phi0 = random.uniform(args.phi0_range[0], args.phi0_range[1])
     hB_list = np.linspace(0, h0 * args.maxratio, nB)
     for hB in hB_list:
+        phiB = random.uniform(args.phi0_range[0], args.phi0_range[1])
         injectfile = os.path.join(paths["inj"], "inject_ST_%i.par" % n)
         injectlines_extra = [
-            "H0 %.6e" % h0_list[n],
-            "PHI0TENSOR %.6f" % phi0[n],
-            "HSCALARB %.6f" % hB_list[n],
-            "PHI0SCALAR %.6f" % phiB[n]
+            "H0 %.6e" % h0,
+            "PHI0TENSOR %.6f" % phi0,
+            "HSCALARB %.6f" % hB,
+            "PHI0SCALAR %.6f" % phiB
         ]
         with open(injectfile, "w") as f:
             for line in injectlines + injectlines_extra:
@@ -204,20 +204,20 @@ ppe_arguments = {
     "input-files": "",
     "par-file": parfile,
     "inject-nonGR": "ST",
-    "inject-file": os.path.join(paths["inj"], "inject_ST_$(instID).par"),
+    "inject-file": os.path.join(paths["inj"], "inject_ST_$(macroinstID).par"),
     "non-fixed-only": "",
-    "Nlive": args.Nlive,
+    "Nlive": str(args.Nlive),
     "kDTree": "0",
     "diffev": "0",
     "covariance": "0",
     "ensembleStretch": "1",
     "ensembleWalk": "1",
-    "reheterodyne": "$(rehetFreq)"
+    "reheterodyne": "$(macrorehetFreq)"
 }
 
 for det in detectors:
     ppe_arguments["detectors"] += "%s " % det
-    ppe_arguments["input-files"] += "%srehet_%s_%s.%s " % \
+    ppe_arguments["input-files"] += "%s/rehet_%s_%s.%s " % \
                                     (os.path.join(datadir, run, det),
                                      psrname, det, dataext)
 
@@ -231,13 +231,13 @@ for m in models:
     dagjobs[m].add_condor_cmd("initialdir", basedir)
     dagjobs[m].add_condor_cmd("request_memory", "2 GB")
     # log files
-    logs = os.path.join(paths["logs"], "%s_%s_$(instID)" % (psrname, m))
+    logs = os.path.join(paths["logs"], "%s_%s_$(macroinstID)" % (psrname, m))
     dagjobs[m].set_log_file("%s.log" % logs)
     dagjobs[m].set_stderr_file("%s.err" % logs)
     dagjobs[m].set_stdout_file("%s.out" % logs)
     # model specific arguments
     output = os.path.join(paths["out"],
-                          "out_%s_%s_$(instID).txt" % (psrname, m))
+                          "out_%s_%s_$(macroinstID).txt" % (psrname, m))
     dagjobs[m].add_opt("outfile", output)
     dagjobs[m].add_opt("prior-file", prior_filename[m])
     if m != "GR":
@@ -260,9 +260,10 @@ for instID in range(ninst):
         node = pipeline.CondorDAGNode(dagjobs[m])
         node.set_name("%s_%s_%s_%i" % (m, psrname, run, instID))
         node.add_var_opt("instID", str(instID))
-        node.add_var_opt("rehetFreq", "%.6e")
+        node.add_var_opt("rehetFreq", "%.6e" % FREQ_ARRAY[instID])
         dag.add_node(node)
 
+dag.write_sub_files()
 dag.write_dag()
 
 
