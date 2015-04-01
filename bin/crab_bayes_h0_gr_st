@@ -28,9 +28,8 @@ parser.add_argument("--base-dir", default=os.getcwd(), help="Base directory")
 parser.add_argument("--Nlive", default=1000, type=int)
 parser.add_argument("--LAL", default="/home/max.isi/lscsoft/opt/nonGRcw/")
 parser.add_argument("--h0-range", nargs='+', type=float)
-parser.add_argument("--hB-range", nargs='+', type=float)
-parser.add_argument("--ratio", type=float, default=10.0,
-                    help="Strength ratio, h0/hB.")
+parser.add_argument("--maxratio", type=float, default=0.1,
+                    help="Strength ratio, hB/h0.")
 parser.add_argument("--phi0-range", nargs='+', default=[0, 2 * np.pi],
                     type=float)
 parser.add_argument("--phiB-range", nargs='+', default=[0, 2 * np.pi],
@@ -164,15 +163,6 @@ elif (not isinstance(args.h0_range, list)) or len(args.h0_range) != 2:
 else:
     h0_list = np.linspace(args.h0_range[0], args.h0_range[1], nGR)
 
-if args.hB_range is None:
-    ratio = args.ratio
-    hB_list = np.linspace(min(h0_list) / ratio, max(h0_list) / ratio, nB)
-elif (not isinstance(args.hB_range, list)) or len(args.hB_range) != 2:
-    print "ERROR: invalid scalar injection range."
-    sys.exit(1)
-else:
-    hB_list = np.linspace(args.hB_range[0], args.hB_range[1], nB)
-
 # THIS IS VALID ONLY FOR THE CRAB
 injectlines = [
     "RAJ 05:34:31.973",
@@ -186,7 +176,7 @@ injectlines = [
 
 n = 0
 for h0 in h0_list:
-    hB_list = np.linspace(args.hB_range[0], args.hB_range[1], nB)
+    hB_list = np.linspace(0, h0 * args.maxratio, nB)
     for hB in hB_list:
         injectfile = os.path.join(paths["inj"], "inject_ST_%i.par" % n)
         injectlines_extra = [
