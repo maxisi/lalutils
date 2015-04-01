@@ -51,7 +51,7 @@ if len(models) > 2:
 # LOAD DATA
 if len(models) == 2 and isinstance(models, list):
     print "Comparing %s to %s." % (models[0], models[1])
-    ylabel = r"$\ln B^{\rm %s}_{\rm %s}$" % (models[0], models[1])
+    ylabel = r"${\rm sgn}{\left(B^{\rm %s}_{\rm %s}\right)}|\ln B^{\rm %s}_{\rm %s}|^\frac{1}{2}$" % (models[0], models[1], models[0], models[1])
     # array to contain list of relative log Bayes factors
     logB_m0_m1 = []
     # list of rlB's for a given directory
@@ -74,7 +74,7 @@ elif len(models) == 1 or isinstance(models, basestring):
     else:
         m = models[0]
     print "Comparing %s to noise-only model." % m
-    ylabel = r"$\ln B^{\rm %s}_{\rm n}$" % m
+    ylabel = r"${\rm sgn}{\left(B^{\rm %s}_{\rm n}\right)}|\ln B^{\rm %s}_{\rm n}|^\frac{1}{2}$" % (m, m)
     logB_m0_m1 = []
     for n in range(args.ninst):
         bf = os.path.join(bdir, "bvsh_out_%s_J0534+2200_S5_H1_%s_%i.txt_B.txt" % (m, im, n))
