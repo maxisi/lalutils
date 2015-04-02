@@ -9,9 +9,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-basedir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+basedir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(basedir)
-
 from lalutils import ppe
 
 mplparams = {
@@ -19,10 +18,6 @@ mplparams = {
     'axes.linewidth': 1,  # set axes linewidths to 0.5
     'axes.grid': False,  # add a grid
     'axes.labelweight': 'normal',
-    #'axes.axisbelow': True,
-    #'grid.linestyle': '-',  # grid as solid lines not dashed
-    #'grid.color': 'gray',  # grid lines grey
-    #'grid.linewidth': 0.5,
     'font.family': 'serif',
     'font.size': 24,
     'font.serif': 'Computer Modern Roman'
@@ -70,7 +65,7 @@ if len(models) == 2 and isinstance(models, list):
             fname = "bvsh_out_%s_J0534+2200_S5_H1_%s_(N).txt_B.txt"\
                     % (m.lower(), injectmodel)
             b[m] = ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
-                                            models=(m, "noise"))
+                                            models=(m, "n"))
         blist.append(ppe.subtractb(b[models[0]], b[models[1]]))
     bfinal = blist[0]-blist[1]
 
@@ -84,7 +79,7 @@ elif len(models) == 1 or isinstance(models, basestring):
         fname = "bvsh_out_%s_J0534+2200_S5_H1_%s_(N).txt_B.txt"\
                 % (m.lower(), injectmodel)
         blist.append(ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
-                                            models=(m, "noise")))
+                                            models=(m, "n")))
     bfinal = blist[0]-blist[1]
 
 else:
