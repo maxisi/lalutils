@@ -1,0 +1,115 @@
+#! /usr/bin/env python
+
+import os
+import sys
+import glob
+import argparse
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+basedir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(basedir)
+
+from lalutils import ppe
+
+mplparams = {
+    'backend': 'png',
+    'text.usetex': True,  # use LaTeX for all text
+    'axes.linewidth': 1,  # set axes linewidths to 0.5
+    'axes.grid': False,  # add a grid
+    'axes.labelweight': 'normal',
+    #'axes.axisbelow': True,
+    #'grid.linestyle': '-',  # grid as solid lines not dashed
+    #'grid.color': 'gray',  # grid lines grey
+    #'grid.linewidth': 0.5,
+    'font.family': 'serif',
+    'font.size': 24
+}
+matplotlib.rcParams.update(mplparams)
+
+default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
+
+parser = argparse.ArgumentParser()
+parser.add_argument("directories")
+parser.add_argument("injectdirs")
+parser.add_argument("ninst", type=int)
+parser.add_argument("--inject-model", default='GR')
+parser.add_argument("-o", "--output", default=default_output)
+parser.add_argument("-m", "--models", nargs='+', default=['G4v', 'GR'])
+parser.add_argument("--legend-loc", default="best")
+parser.add_argument("--ls", default='+')
+parser.add_argument("--color", default=None)
+parser.add_argument("--alpha", default=1, type=float)
+parser.add_argument("--ylim", nargs='+', type=float, default=None)
+
+args = parser.parse_args()
+bdirs = args.directories
+injectmodel = args.inject_model
+fig_name, fig_ext = os.path.splitext(args.output)
+models = args.models
+
+if len(models) > 2:
+    raise IOError("cannot compare more than two models.")
+if len(bdir) != 2:
+    raise IOError("can only compare two sets.")
+
+# LOAD DATA
+if len(models) == 2 and isinstance(models, list):
+    print "Comparing %s to %s." % (models[0], models[1])
+    ylabel = r"$\ln B^{\rm %s}_{\rm %s}$" % (models[0], models[1])
+    # array to contain list of relative log Bayes factors
+    blist = []
+    for bdir in bdirs:
+        bdir = os.path.abspath(bdir)
+        b = {}
+        for m in models:
+            fname = "bvsh_out_%s_J0534+2200_S5_H1_%s_(N).txt_B.txt"\
+                    % (m.lower(), injectmodel)
+            b[m] = ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
+                                            models=(m, "noise"))
+        blist.append(ppe.subtractb(b[m[0]], b[m[1]]))
+    bfinal = blist[0]-blist[1]
+
+elif len(models) == 1 or isinstance(models, basestring):
+    m = models[0]
+    print "Comparing %s to noise-only model." % m
+    ylabel = r"$\ln B^{\rm %s}_{\rm n}$" % m
+    blist = []
+    for bdir in bdirs:
+        bdir = os.path.abspath(bdir)
+        fname = "bvsh_out_%s_J0534+2200_S5_H1_%s_(N).txt_B.txt"\
+                % (m.lower(), injectmodel)
+        blist[m] = ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
+                                            models=(m, "noise"))
+    bfinal = blist[0]-blist[1]
+
+else:
+    print "Error: invalid models: %r" % models
+    sys.exit(1)
+
+
+# LOAD INJECTION STRENGTHS
+h0 = []
+for n in range(args.ninst):
+    with open(os.path.join(args.injectdirs, "inject_%s_%i.par" % (injectmodel, n)), 'r') as f:
+        for line in f:
+            parval = line.split(' ')
+            if injectmodel == "GR" and parval[0].lower() == "c22":
+                h0.append(2.0*float(parval[1]))
+            elif injectmodel == "G4v" and parval[0].lower() == "h0":
+                h0.append(float(parval[1]))
+
+# PLOT
+plt.figure()
+plt.plot(h0, bfinal, args.ls, color=args.color, alpha=args.alpha)
+
+plt.xlabel(r"$h_{\rm %s}$" % injectmodel)
+plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
+plt.ylabel(ylabel)
+if args.ylim:
+    plt.ylim(*args.ylim)
+plt.savefig(args.output, bbox_inches='tight')
+
+plt.close()
