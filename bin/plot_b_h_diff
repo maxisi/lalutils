@@ -15,7 +15,6 @@ sys.path.append(basedir)
 from lalutils import ppe
 
 mplparams = {
-    'backend': 'png',
     'text.usetex': True,  # use LaTeX for all text
     'axes.linewidth': 1,  # set axes linewidths to 0.5
     'axes.grid': False,  # add a grid
@@ -25,16 +24,17 @@ mplparams = {
     #'grid.color': 'gray',  # grid lines grey
     #'grid.linewidth': 0.5,
     'font.family': 'serif',
-    'font.size': 24
+    'font.size': 24,
+    'font.serif': 'Computer Modern Roman'
 }
 matplotlib.rcParams.update(mplparams)
 
 default_output = os.path.join(os.getcwd(), "logbf_hist.pdf")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("directories")
-parser.add_argument("injectdirs")
-parser.add_argument("ninst", type=int)
+parser.add_argument("directories", nargs='+')
+parser.add_argument("-i", "--injectdirs")
+parser.add_argument("--ninst", type=int)
 parser.add_argument("--inject-model", default='GR')
 parser.add_argument("-o", "--output", default=default_output)
 parser.add_argument("-m", "--models", nargs='+', default=['G4v', 'GR'])
@@ -42,7 +42,9 @@ parser.add_argument("--legend-loc", default="best")
 parser.add_argument("--ls", default='+')
 parser.add_argument("--color", default=None)
 parser.add_argument("--alpha", default=1, type=float)
-parser.add_argument("--ylim", nargs='+', type=float, default=None)
+parser.add_argument("--ylim", nargs='+', type=float)
+parser.add_argument("--label")
+parser.add_argument("--std", action="store_true")
 
 args = parser.parse_args()
 bdirs = args.directories
@@ -52,7 +54,7 @@ models = args.models
 
 if len(models) > 2:
     raise IOError("cannot compare more than two models.")
-if len(bdir) != 2:
+if len(bdirs) != 2:
     raise IOError("can only compare two sets.")
 
 # LOAD DATA
@@ -69,7 +71,7 @@ if len(models) == 2 and isinstance(models, list):
                     % (m.lower(), injectmodel)
             b[m] = ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
                                             models=(m, "noise"))
-        blist.append(ppe.subtractb(b[m[0]], b[m[1]]))
+        blist.append(ppe.subtractb(b[models[0]], b[models[1]]))
     bfinal = blist[0]-blist[1]
 
 elif len(models) == 1 or isinstance(models, basestring):
@@ -81,8 +83,8 @@ elif len(models) == 1 or isinstance(models, basestring):
         bdir = os.path.abspath(bdir)
         fname = "bvsh_out_%s_J0534+2200_S5_H1_%s_(N).txt_B.txt"\
                 % (m.lower(), injectmodel)
-        blist[m] = ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
-                                            models=(m, "noise"))
+        blist.append(ppe.BayesArray.collect_n(bdir, args.ninst, mask=fname,
+                                            models=(m, "noise")))
     bfinal = blist[0]-blist[1]
 
 else:
@@ -101,9 +103,16 @@ for n in range(args.ninst):
             elif injectmodel == "G4v" and parval[0].lower() == "h0":
                 h0.append(float(parval[1]))
 
+label = args.label
+if args.std:
+    std = np.std(bfinal)
+    if label:
+        label = r"%s, $\sigma=%.2f$" % (label, std)
+    else:
+        label = r"$\sigma=%.2f$" % std
 # PLOT
 plt.figure()
-plt.plot(h0, bfinal, args.ls, color=args.color, alpha=args.alpha)
+plt.plot(h0, bfinal, args.ls, color=args.color, alpha=args.alpha, label=label)
 
 plt.xlabel(r"$h_{\rm %s}$" % injectmodel)
 plt.legend(numpoints=1, prop={'size': 14}, loc=args.legend_loc)
