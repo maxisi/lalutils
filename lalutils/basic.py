@@ -1,5 +1,4 @@
 import numpy as np
-from .ppe import FLOAT_PARAMS, MODEL_PARAMS
 
 ###############################################################################
 # CONSTANTS
@@ -8,6 +7,28 @@ SS = 86164.0905  # Seconds in a sidereal day
 SIDFREQ = 2 * np.pi / SS  # Sidereal angular frequency of Earth
 EARTHRADIUS = 6378.137e3  # Earth radius (m)
 C = 299792458.  # Speed of light (m/s)
+
+MODEL_PARAMS = {
+    'GR': ['C22', 'PHI22', 'COSIOTA', 'PSI'],
+    'G4V': ['H0', 'PHI0VECTOR', 'IOTA', 'PSI'],
+    'ST': ['H0', 'PHI0TENSOR', 'HSCALARB', 'PHI0SCALAR', 'COSIOTA', 'PSI']
+}
+
+FLOAT_PARAMS = ["F", "F0", "F1", "F2", "F3", "F4", "F5", "F6",
+                "P", "P0", "P1", "P2", "P3", "P4", "P5", "P6",
+                "PEPOCH", "POSEPOCH", "DM", "START", "FINISH", "NTOA",
+                "TRES", "TZRMJD", "TZRFRQ", "TZRSITE", "NITS",
+                "A1", "XDOT", "E", "ECC", "EDOT", "T0", "PB", "PBDOT", "OM",
+                "OMDOT", "EPS1", "EPS2", "EPS1DOT", "EPS2DOT", "TASC",
+                "LAMBDA",
+                "BETA", "RA_RAD", "DEC_RAD", "GAMMA", "SINI", "M2", "MTOT",
+                "FB0", "FB1", "FB2", "ELAT", "ELONG", "PMRA", "PMDEC", "DIST",
+                # GW PARAMETERS
+                "H0", "COSIOTA", "PSI", "PHI0", "THETA", "I21", "I31", "C22",
+                "C21", "PHI22", "PHI21", "SNR", "COSTHETA", "IOTA", "HVECTOR"]
+
+STR_PARAMS = ["FILE", "PSR", "PSRJ", "NAME", "RAJ", "DECJ", "RA", "DEC",
+              "EPHEM", "CLK", "BINARY", "UNITS"]
 
 
 ###############################################################################
@@ -86,7 +107,7 @@ def format_to_print(key, value):
         sign = ""
 
     key = key.upper()
-    if key.strip("_ERR") not in FLOAT_PARAMS + STR_PARAMS:
+    if key.replace("_ERR", "") not in (FLOAT_PARAMS + STR_PARAMS):
         raise ValueError("invalid key %r" % key)
 
     if key in FLOAT_PARAMS or isinstance(value, basestring):

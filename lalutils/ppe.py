@@ -3,28 +3,6 @@ import os
 import glob
 from . import basic
 
-MODEL_PARAMS = {
-    'GR': ['C22', 'PHI22', 'COSIOTA', 'PSI'],
-    'G4V': ['H0', 'PHI0VECTOR', 'IOTA', 'PSI'],
-    'ST': ['H0', 'PHI0TENSOR', 'HSCALARB', 'PHI0SCALAR', 'COSIOTA', 'PSI']
-}
-
-FLOAT_PARAMS = ["F", "F0", "F1", "F2", "F3", "F4", "F5", "F6",
-                "P", "P0", "P1", "P2", "P3", "P4", "P5", "P6",
-                "PEPOCH", "POSEPOCH", "DM", "START", "FINISH", "NTOA",
-                "TRES", "TZRMJD", "TZRFRQ", "TZRSITE", "NITS",
-                "A1", "XDOT", "E", "ECC", "EDOT", "T0", "PB", "PBDOT", "OM",
-                "OMDOT", "EPS1", "EPS2", "EPS1DOT", "EPS2DOT", "TASC",
-                "LAMBDA",
-                "BETA", "RA_RAD", "DEC_RAD", "GAMMA", "SINI", "M2", "MTOT",
-                "FB0", "FB1", "FB2", "ELAT", "ELONG", "PMRA", "PMDEC", "DIST",
-                # GW PARAMETERS
-                "H0", "COSIOTA", "PSI", "PHI0", "THETA", "I21", "I31", "C22",
-                "C21", "PHI22", "PHI21", "SNR", "COSTHETA", "IOTA", "HVECTOR"]
-
-STR_PARAMS = ["FILE", "PSR", "PSRJ", "NAME", "RAJ", "DECJ", "RA", "DEC",
-              "EPHEM", "CLK", "BINARY", "UNITS"]
-
 ###############################################################################
 
 
@@ -124,7 +102,7 @@ def subtractb(ba1, ba2):
 
 
 # CF: lscsoft/src/lalsuite/lalapps/src/pulsar/HeterodyneSearch/pulsarpputils.py
-class PriorFile(object):
+class Prior(object):
     """
     Read and write ppe prior files.
     """
@@ -132,7 +110,7 @@ class PriorFile(object):
     def __init__(self, model="GR"):
         self.params = {}
         self.model = model
-        for param in MODEL_PARAMS[model.upper()]:
+        for param in basic.MODEL_PARAMS[model.upper()]:
             self.params[param] = None
 
     def add(self, name, prior, pmin, pmax):
@@ -174,7 +152,7 @@ class PriorFile(object):
 
 
 # CF: lscsoft/src/lalsuite/lalapps/src/pulsar/HeterodyneSearch/pulsarpputils.py
-class ParFile(object):
+class PulsarPar(object):
     def __init__(self, **kwargs):
         self.params = {}
         for key, value in kwargs.iteritems():
@@ -200,7 +178,7 @@ class ParFile(object):
                     break
                 else:
                     key = contents[0].upper()
-                    if key in FLOAT_PARAMS + STR_PARAMS:
+                    if key in basic.FLOAT_PARAMS + basic.STR_PARAMS:
                         new.add(contents[0], contents[1])
                         if len(contents) > 2:
                             new.add("%s_ERR" % contents[0], contents[-1])
@@ -210,4 +188,11 @@ class ParFile(object):
         else:
             return new
 
-    def write(self, path):
+    def write(self, path, params=('RAJ', 'DECJ', 'F0', 'F1', 'PEPOCH')):
+        # have dictionary of to-print factors
+        with open(path, 'w') as f:
+            for par in params:
+                par = par.upper()
+                if par in self.params.keys():
+                    valuestr = basic.format_to_print(par, self.params[par])
+                    f.write("%s %s\n" % (par, str(valuestr)))
