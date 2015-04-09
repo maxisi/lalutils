@@ -9,9 +9,12 @@ EARTHRADIUS = 6378.137e3  # Earth radius (m)
 C = 299792458.  # Speed of light (m/s)
 
 MODEL_PARAMS = {
-    'GR': ['C22', 'PHI22', 'COSIOTA', 'PSI'],
-    'G4V': ['H0', 'PHI0VECTOR', 'IOTA', 'PSI'],
-    'ST': ['H0', 'PHI0TENSOR', 'HSCALARB', 'PHI0SCALAR', 'COSIOTA', 'PSI']
+    'GR': ['RAJ', 'DECJ', 'F0', 'F1', 'PEPOCH', 'C22', 'PHI22', 'COSIOTA',
+           'PSI'],
+    'G4V': ['RAJ', 'DECJ', 'F0', 'F1', 'PEPOCH', 'H0', 'PHI0VECTOR', 'IOTA',
+            'PSI'],
+    'ST': ['RAJ', 'DECJ', 'F0', 'F1', 'PEPOCH', 'H0', 'PHI0TENSOR', 'HSCALARB',
+           'PHI0SCALAR', 'COSIOTA', 'PSI']
 }
 
 FLOAT_PARAMS = ["F", "F0", "F1", "F2", "F3", "F4", "F5", "F6",
@@ -94,89 +97,114 @@ def mjd_gps(mjd):
     return tgps
 
 
-def format_to_print(key, value):
-    """
-    Prepares PAR argument for printing.
-    :param key: argument name.
-    :param value: argument value (float or string)
-    :return: formatted string
-    """
-    if value < 0:
-        sign = "-"
-    else:
-        sign = ""
+class Parameter(object):
+    def __init__(self, key, value):
+        key = key.upper()
+        if key.replace("_ERR", "") in FLOAT_PARAMS + STR_PARAMS:
+            self.key = key
+            self.value = self.format_to_store(key, value)
 
-    key = key.upper()
-    if key.replace("_ERR", "") not in (FLOAT_PARAMS + STR_PARAMS):
-        raise ValueError("invalid key %r" % key)
+    def __str__(self):
+        return self.format_to_print(self.key, self.value)
 
-    if key in FLOAT_PARAMS or isinstance(value, basestring):
-        return str(value)
-    elif key in ['RA', 'RAJ', 'RA_ERR', 'RAJ_ERR']:
-        sec = value / SIDFREQ
-        if '_ERR' in key:
-            return str(sec)
-        m, s = divmod(sec, 60)
-        h, m = divmod(m, 60)
-        sign = ""
-        if s >= 9.9995:
-            return "%s%.2d:%.2d:%.5f" % (sign, h, m, s)
+    @staticmethod
+    def format_to_print(key, value):
+        """
+        Prepares PAR argument for printing.
+        :param key: argument name.
+        :param value: argument value (float or string)
+        :return: formatted string
+        """
+        if value < 0:
+            sign = "-"
         else:
-            return "%s%.2d:%.2d:0%.5f" % (sign, h, m, s)
-    elif key in ['DEC', 'DECJ', 'DEC_ERR', 'DECJ_ERR']:
-        # taken from: lscsoft/src/lalsuite/lalapps/src/pulsar/HeterodyneSearch/
-        # pulsarpputils.py
-        arc = np.degrees(np.fmod(np.fabs(value), np.pi))
-        d = int(arc)
-        arc = (arc - d) * 60.0
-        m = int(arc)
-        s = (arc - m) * 60.0
-        if '_ERR' in key:
-            return str(s)
-        if s >= 9.9995:
-            return "%s%.2d:%.2d:%.5f" % (sign, d, m, s)
-        else:
-            return "%s%.2d:%.2d:0%.5f" % (sign, d, m, s)
-    else:
-        raise TypeError("cannot format argument %s with value %r"
-                        % (key, value))
+            sign = ""
 
+        key = key.upper()
+        if key.replace("_ERR", "") not in (FLOAT_PARAMS + STR_PARAMS):
+            raise ValueError("invalid key %r" % key)
 
-def format_to_store(key, value):
-    """
-    Prepare PAR argument for storing.
-    :param key: argument name.
-    :param value: argument value.
-    :return: float or string
-    """
-    key = key.upper()
-    if key.replace("_ERR", '') not in (FLOAT_PARAMS + STR_PARAMS):
-        raise ValueError("invalid key %r" % key)
-    if key in ['RA_ERR', 'RAJ_ERR']:
-        if isinstance(value, basestring):
-            floatvalue = hms_rad(0., 0., value)
-        elif isinstance(value, float):
-            floatvalue = value
+        if key in FLOAT_PARAMS or isinstance(value, basestring):
+            return str(value)
+        elif key in ['RA', 'RAJ', 'RA_ERR', 'RAJ_ERR']:
+            sec = value / SIDFREQ
+            if '_ERR' in key:
+                return str(sec)
+            m, s = divmod(sec, 60)
+            h, m = divmod(m, 60)
+            sign = ""
+            if s >= 9.9995:
+                return "%s%.2d:%.2d:%.5f" % (sign, h, m, s)
+            else:
+                return "%s%.2d:%.2d:0%.5f" % (sign, h, m, s)
+        elif key in ['DEC', 'DECJ', 'DEC_ERR', 'DECJ_ERR']:
+            # taken from: lscsoft/src/lalsuite/lalapps/src/pulsar
+            # /HeterodyneSearch/pulsarpputils.py
+            arc = np.degrees(np.fmod(np.fabs(value), np.pi))
+            d = int(arc)
+            arc = (arc - d) * 60.0
+            m = int(arc)
+            s = (arc - m) * 60.0
+            if '_ERR' in key:
+                return str(s)
+            if s >= 9.9995:
+                return "%s%.2d:%.2d:%.5f" % (sign, d, m, s)
+            else:
+                return "%s%.2d:%.2d:0%.5f" % (sign, d, m, s)
         else:
-            raise TypeError('invalid %s value type %r' % (key, value))
-    elif key in ['DEC_ERR', 'DECJ_ERR']:
-        if isinstance(value, basestring):
-            floatvalue = dms_rad(0., 0., value)
-        elif isinstance(value, float):
-            floatvalue = value
-        else:
-            raise TypeError('invalid %s value type %r' % (key, value))
-    else:
-        try:
-            floatvalue = float(value)
-        except ValueError:
-            if key in ['RA', 'RAJ']:
-                floatvalue = hms_rad(value)
-            elif key in ['DEC', 'DECJ']:
-                floatvalue = dms_rad(value)
-            elif isinstance(value, basestring):
+            raise TypeError("cannot format argument %s with value %r"
+                            % (key, value))
+
+    @staticmethod
+    def format_to_store(key, value):
+        """
+        Prepare PAR argument for storing.
+        :param key: argument name.
+        :param value: argument value.
+        :return: float or string
+        """
+        key = key.upper()
+        if not isparam(key):
+            raise ValueError("invalid key %r" % key)
+
+        if key in ['RA_ERR', 'RAJ_ERR']:
+            if isinstance(value, basestring):
+                floatvalue = hms_rad(0., 0., value)
+            elif isinstance(value, float):
                 floatvalue = value
             else:
-                raise ValueError('invalid PAR %s value %r.'
-                                 % (key, value))
-    return floatvalue
+                raise TypeError('invalid %s value type %r' % (key, value))
+        elif key in ['DEC_ERR', 'DECJ_ERR']:
+            if isinstance(value, basestring):
+                floatvalue = dms_rad(0., 0., value)
+            elif isinstance(value, float):
+                floatvalue = value
+            else:
+                raise TypeError('invalid %s value type %r' % (key, value))
+        else:
+            try:
+                floatvalue = float(value)
+            except ValueError:
+                if key in ['RA', 'RAJ']:
+                    floatvalue = hms_rad(value)
+                elif key in ['DEC', 'DECJ']:
+                    floatvalue = dms_rad(value)
+                elif isinstance(value, basestring):
+                    floatvalue = value
+                else:
+                    raise ValueError('invalid PAR %s value %r.' % (key, value))
+        return floatvalue
+
+
+def isparam(key):
+    if key.upper().replace("_ERR", '') in FLOAT_PARAMS + STR_PARAMS:
+        return True
+    else:
+        return False
+
+
+def ismodel(key):
+    if key.upper() in MODEL_PARAMS.keys():
+        return True
+    else:
+        return False

@@ -1,0 +1,74 @@
+#! /usr/bin/env python
+
+import os
+import sys
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+basedir = os.getenv('LALUTILS') or os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))
+try:
+    sys.path.append(basedir)
+    from lalutils import ppe
+except:
+    raise ImportError('ppe module not found. Set $LALUTILS to point to'
+                      'package location.')
+
+default_output = os.path.join(os.getcwd(), "st3Dscatter.png")
+
+parser = argparse.ArgumentParser()
+parser.add_argument('inputdir')
+parser.add_argument('-o', '--outputdir', default=default_output)
+parser.add_argument('-n', '--ninst', type=int, default=500)
+parser.add_argument('--injmask', default='injections/inject_ST_(N).par')
+parser.add_argument('--bayesmask',
+                    default='rawoutput/out_J0534+2200_(M)_(N).txt_B.txt')
+parser.add_argument("-m", "--models", nargs='+', default=['ST', 'GR'])
+parser.add_argument('--ratio', action="store_true")
+
+
+args = parser.parse_args()
+inputdir = args.inputdir
+fig_name, fig_ext = os.path.splitext(args.outputdir)
+ninst = args.ninst
+
+bayespath = os.path.join(inputdir, args.bayesmask)
+injpath = os.path.join(inputdir, args.injmask)
+
+results = ppe.Results.collect(bpath=bayespath, injpath=injpath, ninst=ninst,
+                              models=args.models)
+
+hGR = []
+hSB = []
+logB = []
+for n in range(ninst):
+    # get values
+    b = results.bayes[n]
+    hgr = results.injections[n]['H0']
+    try:
+        hsb = results.injections[n]['HSCALARB']
+    except KeyError:
+        hsb = 0.0
+    print hgr
+    print hsb
+    # append
+    logB.append(b)
+    hGR.append(hgr)
+    if args.ratio:
+        hSB.append(hsb/hgr)
+    else:
+        hSB.append(hsb)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(hGR, hSB, logB)
+ax.set_xlabel('hGR')
+if args.ratio:
+    ax.set_ylabel('hB/hGR')
+else:
+    ax.set_ylabel('hB')
+ax.set_zlabel('B')
+
+plt.show()

@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import glob
+from warnings import warn
 from . import basic
 
 ###############################################################################
@@ -58,7 +59,8 @@ class BayesArray(np.ndarray):
             setattr(self, key, getattr(obj, key, value))
 
     @classmethod
-    def collect_all(cls, directory, mask="*_B.txt", models=(None, None)):
+    def collect_all(cls, directory, mask=None, models=(None, None)):
+        mask = mask or "*_B.txt"
         if not os.path.isdir(directory):
             raise IOError("invalid source directory %r" % directory)
         pathmask = os.path.join(directory, mask)
@@ -73,15 +75,14 @@ class BayesArray(np.ndarray):
                   models=(None, None)):
         if not os.path.isdir(directory):
             raise IOError("invalid source directory %r" % directory)
-        pathmask = os.path.join(directory, mask)
         d = []
         for n in range(n0, nf):
-            pathmask = os.path.join(directory, mask.replace('(N)', str(n)))
-            filenames = glob.glob(pathmask)
-            if len(filenames) > 1:
-                raise IOError("degenerate path mask %r" % pathmask)
-            bf = BayesFile.load(filenames[0])
-            d.append(bf.logB)
+            path = os.path.join(directory, mask.replace('(N)', str(n)))
+            try:
+                bf = BayesFile.load(path)
+                d.append(bf.logB)
+            except IOError:
+                warn("Not found: %r" % path)
         return cls(d, origin=directory, models=models)
 
     def export(self, path):
@@ -93,6 +94,12 @@ class BayesArray(np.ndarray):
 
 
 def subtractb(ba1, ba2):
+    """
+    :rtype : BayesArray
+    :param ba1:
+    :param ba2:
+    :return:
+    """
     output = ba1 - ba2
     type1 = ba1.__class__.__name__
     type2 = ba2.__class__.__name__
@@ -108,6 +115,8 @@ class Prior(object):
     """
 
     def __init__(self, model="GR"):
+        if not basic.ismodel(model):
+            raise AttributeError("invalid signal model %r" % model)
         self.params = {}
         self.model = model
         for param in basic.MODEL_PARAMS[model.upper()]:
@@ -160,13 +169,17 @@ class PulsarPar(object):
 
     def add(self, key, value):
         key = key.upper()
-        self.params[key] = basic.format_to_store(key, value)
+        self.params[key] = basic.Parameter(key, value)
 
     def __getitem__(self, item):
-        return self.params[item]
+        return self.params[item].value
 
     @classmethod
     def read(cls, path):
+        """
+
+        :rtype : PulsarPar
+        """
         new = cls()
         paramsadded = 0
         with open(path, 'r') as f:
@@ -174,8 +187,7 @@ class PulsarPar(object):
                 if line[0] not in ['#', ';', '/']:
                     contents = line.split()
                     if not (len(contents) > 4 or len(contents) < 2):
-                        key = contents[0].upper()
-                        if key in basic.FLOAT_PARAMS + basic.STR_PARAMS:
+                        if basic.isparam(contents[0]):
                             new.add(contents[0], contents[1])
                             if len(contents) > 2:
                                 new.add("%s_ERR" % contents[0], contents[-1])
@@ -186,10 +198,84 @@ class PulsarPar(object):
             return new
 
     def write(self, path, params=('RAJ', 'DECJ', 'F0', 'F1', 'PEPOCH')):
-        # have dictionary of to-print factors
+        if basic.ismodel(params):
+            params = basic.MODEL_PARAMS(params)
+
         with open(path, 'w') as f:
             for par in params:
                 par = par.upper()
                 if par in self.params.keys():
-                    valuestr = basic.format_to_print(par, self.params[par])
+                    valuestr = str(self.params[par])
                     f.write("%s %s\n" % (par, str(valuestr)))
+
+
+class Results(object):
+    def __init__(self, bayes=None, injections=None):
+        self.bayes = bayes
+        self.injections = injections
+
+    @classmethod
+    def collect(cls, injpath=None, bpath=None, ninst=None, models=None):
+        # check model names
+        if models:
+            if isinstance(models, basestring):
+                if basic.ismodel(models):
+                    models = [models]
+                else:
+                    raise AttributeError('invalid model %r' % models)
+            elif 0 < len(models) < 3:
+                for m in models:
+                    if not (basic.ismodel(m) or m in ['n', 'noise']):
+                        raise AttributeError('invalid model %r' % models)
+            else:
+                raise AttributeError('invalid models %r' % models)
+
+        # load Bayes factors
+        # determine filename mask from path
+        bdir, bmask = os.path.split(bpath)
+        if bmask == '':
+            bmask = None
+        if ninst:
+            if models:
+                b = {}
+                for m in models:
+                    if m not in ['n', 'noise']:
+                        b[m] = BayesArray.collect_n(
+                            bdir.replace('(M)', m), ninst,
+                            mask=bmask.replace('(M)', m), models=(m, 'n'))
+                if len(models) == 2:
+                    bayes = subtractb(b[models[0]], b[models[1]])
+                elif len(models) == 1:
+                    bayes = b[models[0]]
+                else:
+                    raise AttributeError('no valid models in %r' % models)
+            else:
+                bayes = BayesArray.collect_n(bdir, ninst, mask=bmask)
+        else:
+            warn('collect_all might return unsorted results.')
+            if models:
+                b = {}
+                for m in models:
+                    if m not in ['n', 'noise']:
+                        b[m] = BayesArray.collect_all(
+                            bpath.replace('(M)', m), mask=bmask,
+                            models=(m, 'n'))
+                if len(models) == 2:
+                    bayes = subtractb(b[models[0]], b[models[1]])
+                elif len(models) == 1:
+                    bayes = b[models[0]]
+                else:
+                    raise AttributeError('no valid models in %r' % models)
+            else:
+                bayes = BayesArray.collect_all(bpath, mask=bmask)
+
+        # load injections
+        if injpath:
+            if '(N)' not in injpath:
+                raise TypeError("injection path name must contain '(N)'")
+            else:
+                injpars = []
+                for ninst in range(len(bayes)):
+                    path = injpath.replace('(N)', str(ninst))
+                    injpars.append(PulsarPar.read(path))
+        return cls(bayes=bayes, injections=injpars)
