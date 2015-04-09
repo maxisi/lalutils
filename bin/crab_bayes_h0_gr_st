@@ -176,14 +176,13 @@ random.seed(2)
 for h0 in h0_list:
     phi0 = random.uniform(args.phi0_range[0], args.phi0_range[1])
     hB_list = np.linspace(0, h0 * args.maxratio, nB)
-    print hB_list
     for hB in hB_list:
         phiB = random.uniform(args.phi0_range[0], args.phi0_range[1])
         injectfile = os.path.join(paths["inj"], "inject_ST_%i.par" % n)
         injectlines_extra = [
             "H0 %.6e" % h0,
             "PHI0TENSOR %.6f" % phi0,
-            "HSCALARB %.6f" % hB,
+            "HSCALARB %.6e" % hB,
             "PHI0SCALAR %.6f" % phiB
         ]
         with open(injectfile, "w") as f:
