@@ -1,5 +1,5 @@
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 
 mplparams = {
     'text.usetex': True,  # use LaTeX for all text

@@ -3,7 +3,7 @@
 import os
 import sys
 import argparse
-import numpy as np
+import pickle
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -29,6 +29,7 @@ parser.add_argument("-m", "--models", nargs='+', default=['ST', 'GR'])
 parser.add_argument('--ratio', action="store_true")
 parser.add_argument('--elev', default=0, type=float)
 parser.add_argument('--rot', default=0, type=float)
+parser.add_argument('--pickle', action="store_true")
 
 args = parser.parse_args()
 inputdir = args.inputdir
@@ -70,6 +71,9 @@ else:
 ax.set_zlabel('B')
 
 ax.view_init(args.elev, args.rot)
-
-plt.savefig(args.outputdir)
 plt.show()
+
+if args.pickle:
+    pickle.dump(ax, file(args.outputdir+'.pickle','w'))
+else:
+    plt.savefig(args.outputdir)
