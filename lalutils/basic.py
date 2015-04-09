@@ -28,7 +28,9 @@ FLOAT_PARAMS = ["F", "F0", "F1", "F2", "F3", "F4", "F5", "F6",
                 "FB0", "FB1", "FB2", "ELAT", "ELONG", "PMRA", "PMDEC", "DIST",
                 # GW PARAMETERS
                 "H0", "COSIOTA", "PSI", "PHI0", "THETA", "I21", "I31", "C22",
-                "C21", "PHI22", "PHI21", "SNR", "COSTHETA", "IOTA", "HVECTOR"]
+                "C21", "PHI22", "PHI21", "SNR", "COSTHETA", "IOTA", "HPLUS",
+                "HCROSS", "PHI0VECTOR", "PSIVECTOR", "HVECTORX", "HVECTORY",
+                "PHI0VECTOR", "PSIVECTOR", "HSCALARB", "HSCALARL"]
 
 STR_PARAMS = ["FILE", "PSR", "PSRJ", "NAME", "RAJ", "DECJ", "RA", "DEC",
               "EPHEM", "CLK", "BINARY", "UNITS"]
