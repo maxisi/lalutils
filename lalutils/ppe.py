@@ -171,18 +171,15 @@ class PulsarPar(object):
         paramsadded = 0
         with open(path, 'r') as f:
             for line in f:
-                if line[0] in ['#', ';', '/']:
-                    break
-                contents = line.split()
-                if len(contents) > 4 or len(contents) < 2:
-                    break
-                else:
-                    key = contents[0].upper()
-                    if key in basic.FLOAT_PARAMS + basic.STR_PARAMS:
-                        new.add(contents[0], contents[1])
-                        if len(contents) > 2:
-                            new.add("%s_ERR" % contents[0], contents[-1])
-                    paramsadded += 1
+                if line[0] not in ['#', ';', '/']:
+                    contents = line.split()
+                    if not (len(contents) > 4 or len(contents) < 2):
+                        key = contents[0].upper()
+                        if key in basic.FLOAT_PARAMS + basic.STR_PARAMS:
+                            new.add(contents[0], contents[1])
+                            if len(contents) > 2:
+                                new.add("%s_ERR" % contents[0], contents[-1])
+                        paramsadded += 1
         if paramsadded == 0:
             raise IOError("invalid prior file.")
         else:
