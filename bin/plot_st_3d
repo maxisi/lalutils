@@ -51,9 +51,8 @@ for n in range(ninst):
         hsb = results.injections[n]['HSCALARB']
     except KeyError:
         hsb = 0.0
-    print hgr
-    print hsb
     # append
+    print results.injections[n].params
     logB.append(b)
     hGR.append(hgr)
     if args.ratio:
@@ -63,7 +62,7 @@ for n in range(ninst):
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(hGR, hSB, logB)
+ax.scatter(hGR, hSB, logB, c=logB)
 ax.set_xlabel('hGR')
 if args.ratio:
     ax.set_ylabel('hB/hGR')
@@ -71,4 +70,7 @@ else:
     ax.set_ylabel('hB')
 ax.set_zlabel('B')
 
+ax.view_init(1, -90)
+
+plt.savefig(args.outputdir)
 plt.show()
