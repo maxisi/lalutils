@@ -216,6 +216,7 @@ class Results(object):
 
     @classmethod
     def collect(cls, injpath=None, bpath=None, ninst=None, models=None):
+        print "collecting"
         # check model names
         if models:
             if isinstance(models, basestring):
@@ -236,6 +237,7 @@ class Results(object):
         if bmask == '':
             bmask = None
         if ninst:
+            print ninst
             if models:
                 b = {}
                 for m in models:
@@ -244,9 +246,12 @@ class Results(object):
                             bdir.replace('(M)', m), ninst,
                             mask=bmask.replace('(M)', m), models=(m, 'n'))
                 if len(models) == 2:
+                    print "two models"
                     bayes = subtractb(b[models[0]], b[models[1]])
+                    print bayes
                 elif len(models) == 1:
                     bayes = b[models[0]]
+                    print bayes
                 else:
                     raise AttributeError('no valid models in %r' % models)
             else:
@@ -262,7 +267,9 @@ class Results(object):
                             models=(m, 'n'))
                 if len(models) == 2:
                     bayes = subtractb(b[models[0]], b[models[1]])
+                    print bayes.models
                 elif len(models) == 1:
+                    print "1 model ", models
                     bayes = b[models[0]]
                 else:
                     raise AttributeError('no valid models in %r' % models)

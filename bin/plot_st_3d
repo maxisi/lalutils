@@ -27,7 +27,8 @@ parser.add_argument('--bayesmask',
                     default='rawoutput/out_J0534+2200_(M)_(N).txt_B.txt')
 parser.add_argument("-m", "--models", nargs='+', default=['ST', 'GR'])
 parser.add_argument('--ratio', action="store_true")
-
+parser.add_argument('--elev', default=0, type=float)
+parser.add_argument('--rot', default=0, type=float)
 
 args = parser.parse_args()
 inputdir = args.inputdir
@@ -52,14 +53,12 @@ for n in range(ninst):
     except KeyError:
         hsb = 0.0
     # append
-    print results.injections[n].params
     logB.append(b)
     hGR.append(hgr)
     if args.ratio:
         hSB.append(hsb/hgr)
     else:
         hSB.append(hsb)
-
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter(hGR, hSB, logB, c=logB)
@@ -70,7 +69,7 @@ else:
     ax.set_ylabel('hB')
 ax.set_zlabel('B')
 
-ax.view_init(1, -90)
+ax.view_init(args.elev, args.rot)
 
 plt.savefig(args.outputdir)
 plt.show()
